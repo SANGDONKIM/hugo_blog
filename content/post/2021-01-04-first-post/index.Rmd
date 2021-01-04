@@ -1,0 +1,10 @@
+---
+title: "first post"
+author: "dondon"
+date: '2021-01-04'
+slug: first-post
+categories: R
+tags: R Markdown
+---
+first post 
+dadd
