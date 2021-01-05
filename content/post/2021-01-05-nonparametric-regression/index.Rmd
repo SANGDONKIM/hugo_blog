@@ -1,0 +1,117 @@
+---
+title: 'Nonparametric Regression '
+author: "dondon"
+date: '2021-01-05'
+slug: nonparametric-regression
+categories: R
+tags: regression
+---
+
+
+
+```{r, echo=F, include=F}
+library(tidyverse)
+theme_set(theme_bw())
+```
+
+# Non-parametric regression 
+비모수 회귀분석은 함수의 형태를 가정하지 않는 회귀모형을 의미한다. 모수적 회귀모형에서는 보통 $Y = \beta_0 + \beta_1X_1 + ... + \beta_pX_p + \epsilon$ 형태의 선형성을 가정했다(모수적 회귀모형에는 선형성을 가정하지 않는 비선형 회귀모형도 포함된다). \
+
+반면에 비모수 회귀모형에서는 고정된 함수의 형태를 가정하지 않고 단순히 smooth function을 가정한다. \
+
+표본 (X_1,Y_1), ...(X_n,Y_n)이 주어졌을 때 우리가 추정하고자 하는 회귀 함수는 다음과 같이 정의된다. 
+
+$$
+Y = m(X) + \epsilon, \quad m(x) = E(Y|X = x), \quad E(\epsilon) = 0
+$$
+
+
+
+## Regressogram 
+
+가장 단순한 비모수추정치는 regressogram이다. \
+
+논의의 편의를 위해 설명변수를 1개만 가정한다. 또한 X는 0과 1사이의 값을 갖는다고 가정한다. \
+
+먼저 $[0, 1]$ 구간을 k개의 bin으로 쪼갠다. 쪼갠 각 구간에 포함되는 관측치의 갯수를 계산한다.
+
+$$B_1 = [0, h], \quad B_2= [h, 2h], ...  $$
+$n_j$ : $B_j$에 포함되는 관측치의 갯수
+$n_j = \sum_{i}I(X_i \in B_j), \quad I(X_i \in B_j) = \begin{cases}
+1, & \mbox{if }\mbox{X가 B_j에 포함될 경우} \\
+0, & \mbox{if }n\mbox{ X가 B_j에 포함되지 않을 경우}
+\end{cases}$
+
+$B_j$ 구간에서의 $Y_i$들의 평균 $\bar{Y}_j$는 다음과 같이 정의된다.  
+$$\bar{Y}_j = \frac{1}{n_j} \sum_{X_i \in B_j} Y_i$$
+
+마지막으로 $\hat{m}(x)$는 모든 $B_j$구간에서의 $\bar{Y}_j$의 합으로 정의된다. 
+$$\hat{m}(x) = \sum_{j = 1}^k \bar{Y_j}I(x \in B_j)$$
+<br><br>
+
+
+### example 
+$Y_i = sin(X_i) + \epsilon$라는 모형에서 생성한 50개의 자료이다. 이 경우 $m(x) = sin(x)$이고 $X_i \sim U(-2, 2)$, $\epsilon_i \sim N(0, \frac{1}{9})$이다.  
+```{r}
+n = 50
+set.seed(1233)
+x = runif(n, -2, 2)
+y = sin(x)+rnorm(n, mean = 0, sd = 1/3)
+```
+<br><br>
+
+구간의 갯수 k를 어떻게 지정하는지에 따라 $\hat{m}(x)$는 undersmooth될 수도 있고 oversmooth될 수도 있다. 따라서 적절한 k를 지정하는 것이 중요하다(뒤에 cross-validation 참고). 
+
+<br><br>
+
+```{r}
+running_mean = function(x,y,left,right,k){
+        n = length(x)
+        B = seq(left,right,length=k+1)
+        WhichBin = findInterval(x,B) # 어떤 값이 구간에 있을 때 어느 구간에 속할지 알려주는 함수 
+        N = tabulate(WhichBin) # 각 구간에 포함되어 있는 관측치의 갯수 
+        m.hat = rep(0,k)
+        for(j in 1:k){
+                if(N[j]>0) m.hat[j] = mean(y[WhichBin == j])
+        }
+        return(list(bins=B,m.hat=m.hat))
+}
+```
+
+```{r}
+fit_10 <- running_mean(x, y, left = -2, right = 2, k = 10)
+fit_30 <- running_mean(x, y, left = -2, right = 2, k = 30)
+data.frame(x,y) %>% ggplot(aes( x = x, y = y)) +
+        geom_point() + 
+        geom_line(data = data.frame(x = x, y = sin(x)), aes(x = x, y = y)) +  
+        geom_line(data = data.frame(x = fit_10$bins, y = c(fit_10$m.hat, fit_10$m.hat[10])),
+                  aes(x =x, y = y),
+                  color = 'red')+
+         geom_line(data = data.frame(x = fit_30$bins, y = c(fit_30$m.hat, fit_30$m.hat[30])), 
+                  aes(x = x, y = y), 
+                  color = 'blue') + 
+        ylim(c(-2, 2))
+```
+
+```{r}
+HoRM::regressogram(x = x, y = y, nbins = 10, show.bins = T, show.lines = T, show.means = F, main = 'regressogram')
+```
+
+
+$k = 10$일 때 red line을 보면 적절하게 추정된 것으로 보인다. $k = 30$일 때 blue line을 보면 oversmooth된 것처럼 보인다.   
+
+<br><br>
+
+## kernel estimator 
+
+커널 추정법은 회귀함수 $f$의 추정치 $\hat{f}$가 $\mathbf{y} = (Y_1, Y_2, ..., Y_n)^t$의 선형결합으로 표현된다는 전제 하에서 출발한다. 즉, $\hat{f}(x) = \sum w_iY_i$으로 추정하고자 하는데 가중치 $w_i$를 어떻게 정해주는지가 핵심이다. 
+
+d
+
+
+
+
+
+
+
+
