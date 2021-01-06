@@ -1,0 +1,139 @@
+---
+title: ADMM
+author: dondon
+date: '2021-01-06'
+slug: admm
+categories:
+  - R
+tags: []
+---
+
+
+
+<div id="scaled-dual-admm-algorithm" class="section level3">
+<h3>scaled dual ADMM algorithm</h3>
+<ul>
+<li>Given x, z and , to some initial value.</li>
+<li>Repeat:
+<ul>
+<li><span class="math inline">\(x:= \arg\max_{x}(f(x) + \frac{\rho}{2}\|Ax+Bz-c+\mu\|_2^2)\)</span></li>
+<li><span class="math inline">\(x:= \arg\max_{x}(g(z) + \frac{\rho}{2}\|Ax+Bz-c+\mu\|_2^2)\)</span></li>
+<li><span class="math inline">\(\mu:= \mu + (Ax + Bz - c)\)</span></li>
+<li>Stopping criterion : quit <span class="math inline">\(\|r\|_2&lt;\epsilon\)</span> and <span class="math inline">\(\|s\|_2&lt;\epsilon\)</span>
+<br><br><br>
+#### Stopping criterion
+We can define the primal and dual residuals in ADMM at step k+1.<br />
+</li>
+</ul></li>
+<li>Primal residuals : <span class="math inline">\(r^{k+1} = Ax^{k+1} + Bz^{k+1} - c\)</span><br />
+</li>
+<li>Dual residuals : <span class="math inline">\(s^{k+1} = \rho A^TB(z^{k+1} - z^k)\)</span><br />
+</li>
+</ul>
+<p>Therefore stopping criterion satisfies that <span class="math inline">\(\|r\|_2\)</span> and <span class="math inline">\(\|s\|_2\)</span> are smaller than any <span class="math inline">\(\epsilon\)</span></p>
+<p><br><br></p>
+</div>
+<div id="lasso-example" class="section level3">
+<h3>Lasso example</h3>
+<p><span class="math display">\[\begin{equation*}
+\begin{aligned}
+&amp; \underset{\beta}{\text{minimize}}
+&amp; &amp; \sum_{i=1}^n (y_i - \beta_0 - x_i^t\beta)^2 + \lambda \sum_{j = 1}^p |\beta_j| \\
+\end{aligned}
+\end{equation*}\]</span></p>
+<p><span class="math inline">\(\Leftrightarrow\)</span></p>
+<p><span class="math display">\[\begin{equation*}
+\begin{aligned}
+&amp; \underset{\beta}{\text{minimize}}
+&amp; &amp; f(\beta) + f(z) \\
+&amp; \text{subject to}
+&amp; &amp; I\beta - IZ = 0
+\end{aligned}
+\end{equation*}\]</span></p>
+<p><br><br></p>
+</div>
+<div id="전체-코드" class="section level3">
+<h3>전체 코드</h3>
+<pre class="r"><code>nll &lt;- function(X, Y, beta) {
+                A &lt;- Y - X %*% beta
+                loglike &lt;- crossprod(A)
+                return(loglike)
+}
+
+# Proximal operator
+prox.l1 &lt;- function(u, lambda) {
+                uhat &lt;- abs(u) - lambda
+                prox &lt;- sign(u) * pmax(rep(0, length(u)), uhat)
+                return(prox)
+}
+
+l2norm &lt;- function(x) sqrt(sum(x^2))
+
+
+ADMM &lt;- function(X,Y,rho=5,lambda=.1,iter=100, eps = 0.0001){
+                
+                n &lt;- nrow(X)
+                p &lt;- ncol(X)
+                
+                beta &lt;- matrix(0, nrow=iter, ncol=p) 
+                beta[1,] &lt;- rep(0, p)
+                
+                obj &lt;- rep(0, iter)
+                obj[1] &lt;- nll(X, Y, beta[1,]) + lambda * sum(abs(beta[1,]))
+                
+                z &lt;- matrix(0, nrow=iter, ncol=p)
+                v &lt;- rep(0, p)     
+                
+                invmat &lt;- solve(2*crossprod(X) + diag(rho, p))
+                
+                s &lt;- 0    
+                r &lt;- 0    
+                t &lt;- 0
+                
+                for (t in 2:iter){
+                                
+                                beta[t,] &lt;- invmat %*% (2*crossprod(X, Y) + rho * (z[t-1,]-v))
+                                z[t,] &lt;- prox.l1(beta[t,] + v, lambda/rho)
+                                v &lt;- v + beta[t,] - z[t,]
+                                obj[t] &lt;- nll(X, Y, beta[t,]) + lambda * sum(abs(beta[t,]))
+                                
+                                r &lt;- beta[t,] - z[t,]
+                                s &lt;- -rho * (z[t,] - z[t-1,])
+                                
+                                r.norm &lt;- l2norm(r)
+                                s.norm &lt;- l2norm(s)
+                                
+                                if (r.norm &lt; eps &amp; s.norm &lt; eps) {
+                                                break
+                                }
+                }
+                beta &lt;- beta[-c(t+1:iter),]
+                obj &lt;- obj[-c(t+1:iter)]
+                result &lt;- list(&quot;beta.hat&quot; = beta[nrow(beta),], &quot;beta&quot;=beta, &quot;objective&quot;=obj, &quot;iter&quot;=t)
+                return(result)
+}
+
+x &lt;- cbind(1, matrix(rnorm(1000*4), ncol = 4))
+beta &lt;- c(1.4, -2, -3, 4, 5)
+
+eps &lt;- rnorm(1000*1)　
+y &lt;- x%*%beta + eps 
+
+ADMM(X = x, Y = y)</code></pre>
+<pre><code>## $beta.hat
+## [1]  1.368455 -1.996481 -2.975224  3.992353  4.963856
+## 
+## $beta
+##          [,1]      [,2]      [,3]     [,4]     [,5]
+## [1,] 0.000000  0.000000  0.000000 0.000000 0.000000
+## [2,] 1.365571 -1.991374 -2.967892 3.983095 4.949930
+## [3,] 1.368402 -1.996419 -2.975155 3.992288 4.963759
+## [4,] 1.368455 -1.996481 -2.975224 3.992353 4.963856
+## [5,] 1.368455 -1.996481 -2.975224 3.992353 4.963856
+## 
+## $objective
+## [1] 54858.814  1045.560  1045.208  1045.208  1045.208
+## 
+## $iter
+## [1] 5</code></pre>
+</div>
