@@ -1,0 +1,310 @@
+---
+title: LDA
+author: dondon
+date: '2021-01-06'
+slug: lda
+categories:
+  - R
+tags:
+  - statistics
+---
+
+
+
+<div id="lda와-regression-사이의-유사도-설명" class="section level1">
+<h1>LDA와 regression 사이의 유사도 설명</h1>
+</div>
+<div id="httpsonline.stat.psu.edustat508lesson88.58.5.1" class="section level1">
+<h1><a href="https://online.stat.psu.edu/stat508/lesson/8/8.5/8.5.1" class="uri">https://online.stat.psu.edu/stat508/lesson/8/8.5/8.5.1</a></h1>
+</div>
+<div id="lda-class-2개일-때-예시" class="section level1">
+<h1>LDA class 2개일 때 예시</h1>
+<pre class="r"><code>dat &lt;- data.frame(A1=c(2.95, 2.53, 3.57, 3.16, 2.58, 2.16, 3.27), 
+                  A2=c(6.63, 7.79, 5.65, 5.47, 4.46, 6.22, 3.52),
+                  y=c(&#39;passed&#39;,&#39;passed&#39;,&#39;passed&#39;,&#39;passed&#39;, &#39;not passed&#39;, &#39;not passed&#39;, &#39;not passed&#39;))
+
+dat$y &lt;- as.factor(dat$y)
+dat$y &lt;- factor(dat$y, levels = c(&#39;passed&#39;, &#39;not passed&#39;))
+
+dat</code></pre>
+<pre><code>##     A1   A2          y
+## 1 2.95 6.63     passed
+## 2 2.53 7.79     passed
+## 3 3.57 5.65     passed
+## 4 3.16 5.47     passed
+## 5 2.58 4.46 not passed
+## 6 2.16 6.22 not passed
+## 7 3.27 3.52 not passed</code></pre>
+<pre class="r"><code>x1 &lt;- as.matrix(filter(dat,y == &#39;passed&#39;)[,-3])
+x2 &lt;- as.matrix(filter(dat, y == &#39;not passed&#39;)[,-3])
+
+mu1 &lt;- as.vector(apply(x1, 2, mean))
+mu2 &lt;- as.vector(apply(x2, 2, mean))
+mu &lt;- as.vector(apply(dat[,-3], 2, mean))
+
+x10 &lt;- cbind((x1[,1]-mu[1]), (x1[,2]-mu[2]))
+x20 &lt;- cbind((x2[,1]-mu[1]), (x2[,2]-mu[2]))
+
+c1 &lt;- t(x10)%*%x10/nrow(x1)
+c2 &lt;- t(x20)%*%x20/nrow(x2)</code></pre>
+</div>
+<div id="pooled-within-group-covariance-matrix" class="section level1">
+<h1>pooled within group covariance matrix</h1>
+<pre class="r"><code>c &lt;- ((nrow(x1)*c1)+(nrow(x2)*c2))/nrow(dat)
+cinverse &lt;- solve(c)</code></pre>
+</div>
+<div id="prior-vector" class="section level1">
+<h1>prior vector</h1>
+<pre class="r"><code>p &lt;- c(nrow(x1)/nrow(dat), nrow(x2)/nrow(dat))</code></pre>
+</div>
+<div id="discriminant-function" class="section level1">
+<h1>discriminant function</h1>
+<pre class="r"><code>mu1 &lt;- as.matrix(mu1)
+dim(mu1)</code></pre>
+<pre><code>## [1] 2 1</code></pre>
+<pre class="r"><code>v &lt;- as.matrix(x1[1,])
+dim(v)</code></pre>
+<pre><code>## [1] 2 1</code></pre>
+<pre class="r"><code>dim(cinverse)</code></pre>
+<pre><code>## [1] 2 2</code></pre>
+<pre class="r"><code>p &lt;- as.matrix(p)
+t(mu1)%*%cinverse%*%v-(0.5*t(mu1)%*%cinverse%*%mu1)-p[1,1]</code></pre>
+<pre><code>##          [,1]
+## [1,] 54.97088</code></pre>
+<pre class="r"><code>t(mu2)%*%cinverse%*%v-(0.5*t(mu2)%*%cinverse%*%mu2)-p[2,1]</code></pre>
+<pre><code>##         [,1]
+## [1,] 53.2501</code></pre>
+<pre class="r"><code>fit &lt;- lda(y~A1+A2, data = dat)
+fit$means</code></pre>
+<pre><code>##                A1       A2
+## passed     3.0525 6.385000
+## not passed 2.6700 4.733333</code></pre>
+</div>
+<div id="lda-class-2개-이상일-때-예시" class="section level1">
+<h1>LDA class 2개 이상일 때 예시</h1>
+<pre class="r"><code>head(iris)</code></pre>
+<pre><code>##   Sepal.Length Sepal.Width Petal.Length Petal.Width Species
+## 1          5.1         3.5          1.4         0.2  setosa
+## 2          4.9         3.0          1.4         0.2  setosa
+## 3          4.7         3.2          1.3         0.2  setosa
+## 4          4.6         3.1          1.5         0.2  setosa
+## 5          5.0         3.6          1.4         0.2  setosa
+## 6          5.4         3.9          1.7         0.4  setosa</code></pre>
+<pre class="r"><code>dim(iris)</code></pre>
+<pre><code>## [1] 150   5</code></pre>
+<pre class="r"><code>glimpse(iris)</code></pre>
+<pre><code>## Rows: 150
+## Columns: 5
+## $ Sepal.Length &lt;dbl&gt; 5.1, 4.9, 4.7, 4.6, 5.0, 5.4, 4.6, 5.0, 4.4, 4.9, 5.4,...
+## $ Sepal.Width  &lt;dbl&gt; 3.5, 3.0, 3.2, 3.1, 3.6, 3.9, 3.4, 3.4, 2.9, 3.1, 3.7,...
+## $ Petal.Length &lt;dbl&gt; 1.4, 1.4, 1.3, 1.5, 1.4, 1.7, 1.4, 1.5, 1.4, 1.5, 1.5,...
+## $ Petal.Width  &lt;dbl&gt; 0.2, 0.2, 0.2, 0.2, 0.2, 0.4, 0.3, 0.2, 0.2, 0.1, 0.2,...
+## $ Species      &lt;fct&gt; setosa, setosa, setosa, setosa, setosa, setosa, setosa...</code></pre>
+<pre class="r"><code>iris$Species &lt;- as.factor(iris$Species)
+
+theme_set(theme_bw())
+p1 &lt;- iris %&gt;% 
+        ggplot(aes(x=Sepal.Length, fill = Species))+geom_histogram()
+p2 &lt;- iris %&gt;% 
+        ggplot(aes(x=Sepal.Width, fill = Species))+geom_histogram()
+p3 &lt;- iris %&gt;% 
+        ggplot(aes(x=Petal.Length, fill = Species))+geom_histogram()
+p4 &lt;- iris %&gt;% 
+        ggplot(aes(x=Petal.Width, fill = Species))+geom_histogram()
+grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="index_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+</div>
+<div id="lda-링크-참고" class="section level1">
+<h1>LDA 링크 참고</h1>
+</div>
+<div id="httpwww.sthda.comenglisharticles36-classification-methods-essentials146-discriminant-analysis-essentials-in-r" class="section level1">
+<h1><a href="http://www.sthda.com/english/articles/36-classification-methods-essentials/146-discriminant-analysis-essentials-in-r/" class="uri">http://www.sthda.com/english/articles/36-classification-methods-essentials/146-discriminant-analysis-essentials-in-r/</a></h1>
+<p>caret::createDataPartition(
+y, # 분류(또는 레이블)
+times=1, # 생성할 분할의 수
+p=0.5, # 훈련 데이터에서 사용할 데이터의 비율
+list=TRUE, # 결과를 리스트로 반환할지 여부. FALSE면 행렬을 반환한다.
+)</p>
+<pre class="r"><code>set.seed(123)
+train.sample &lt;- iris$Species %&gt;% 
+        createDataPartition(p=0.8, list = F)
+train.data &lt;- iris[train.sample, ]
+test.data &lt;- iris[-train.sample, ]</code></pre>
+<p>Discriminant analysis can be affected by the scale/unit in which predictor variables are measured.
+It’s generally recommended to standardize/normalize continuous predictor before the analysis.</p>
+<p>caret::preProcess(
+data : data.frame 형태로 지정해주어야함
+method = ‘scale’ : 중심화 (평균값을 뺀다)
+method = ‘center’ : 척도화 (표준편차로 나눈다)
+method = c(‘center’, ‘scale’) : 정규화
+method = c(‘range’) : 데이터를 [0, 1] 사이의 값으로 조정
+method = c(‘BoxCox’), fundge = 0.2 : 데이터의 분포가 치우쳐져 있을 때 각 predictor 별로 lambda값을 지정한다.
+fundge : lambda (0-0.2, 0+0.2)는 0으로 지정
+method = ‘pca’ , pcaComp = 3 : pca 적용, 주성분의 수 (pca만 적용해도 center, scale이 한번에 적용됨)
+method = ‘’nzv’ : 변수의 분산이 거의 0인 경우 제거
+method = ‘zv’ : 변수의 모든 값이 같은 경우 제거
+method = ‘knnlmpute’ : knn 기법을 이용해 NA 근처의 값들을 가중평균해서 값을 채움. RANN 패키지 필요<br />
+method = ‘bagImpute’ : bagged tree model을 통해 결측치를 채움
+method = ‘medianImpute’ : median을 이용해서 결측치를 채움</p>
+<p>predict를 적용해야 데이터 변환 가능
+dat &lt;- predict(preeprocess를 적용한 데이터, 원 데이터) 변환된 데이터 생성</p>
+<pre class="r"><code>preproc.param &lt;- train.data %&gt;% 
+        preProcess(method = c(&#39;center&#39;, &#39;scale&#39;))
+
+
+train.transformed &lt;- preproc.param %&gt;% predict(train.data)
+test.transformed &lt;- preproc.param %&gt;% predict(test.data)</code></pre>
+</div>
+<div id="fit-the-model" class="section level1">
+<h1>fit the model</h1>
+<pre class="r"><code>model &lt;- lda(Species~., data = train.transformed)
+plot(model)</code></pre>
+<p><img src="index_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+<pre class="r"><code>lda.data &lt;- cbind(train.transformed, predict(model)$x)
+ggplot(lda.data, aes(LD1, LD2)) + 
+        geom_point(aes(color = Species))</code></pre>
+<p><img src="index_files/figure-html/unnamed-chunk-11-2.png" width="672" />
+# prediction</p>
+<pre class="r"><code>predictions &lt;- model %&gt;% predict(test.transformed)</code></pre>
+</div>
+<div id="model-accuracy" class="section level1">
+<h1>model accuracy</h1>
+<pre class="r"><code>mean(predictions$class == test.transformed$Species)</code></pre>
+<pre><code>## [1] 0.9666667</code></pre>
+</div>
+<div id="qda" class="section level1">
+<h1>QDA</h1>
+<pre class="r"><code>model &lt;- qda(Species~., data = train.transformed)
+model</code></pre>
+<pre><code>## Call:
+## qda(Species ~ ., data = train.transformed)
+## 
+## Prior probabilities of groups:
+##     setosa versicolor  virginica 
+##  0.3333333  0.3333333  0.3333333 
+## 
+## Group means:
+##            Sepal.Length Sepal.Width Petal.Length Petal.Width
+## setosa       -1.0112835  0.78048647   -1.2900001  -1.2453195
+## versicolor    0.1014181 -0.68674658    0.2566029   0.1472614
+## virginica     0.9098654 -0.09373989    1.0333972   1.0980581</code></pre>
+<pre class="r"><code>predictions &lt;- model %&gt;% predict(test.transformed)
+mean(predictions$class == test.transformed$Species)</code></pre>
+<pre><code>## [1] 0.9666667</code></pre>
+</div>
+<div id="mda-mixture-discriminant-analysis" class="section level1">
+<h1>MDA (Mixture discriminant analysis)</h1>
+<pre class="r"><code>model &lt;- mda(Species~., data = train.transformed)
+predictions &lt;- model %&gt;% predict(test.transformed)
+mean(predictions == test.transformed$Species)</code></pre>
+<pre><code>## [1] 0.9666667</code></pre>
+</div>
+<div id="fda-flexible-discriminant-analysis" class="section level1">
+<h1>FDA (flexible discriminant analysis)</h1>
+<pre class="r"><code>model &lt;- fda(Species~., data = train.transformed)
+predictions &lt;- model %&gt;% predict(test.transformed)
+mean(predictions == test.transformed$Species)</code></pre>
+<pre><code>## [1] 0.9666667</code></pre>
+</div>
+<div id="rda-regularized-discriminant-analysis" class="section level1">
+<h1>RDA ( regularized discriminant analysis)</h1>
+<pre class="r"><code>model &lt;- rda(Species~., data = train.transformed)
+predictions &lt;- model %&gt;% predict(test.transformed)
+mean(predictions$class == test.transformed$Species)</code></pre>
+<pre><code>## [1] 0.9333333</code></pre>
+</div>
+<div id="vowel-data" class="section level1">
+<h1>vowel data</h1>
+<pre class="r"><code>url1 &lt;- &#39;https://web.stanford.edu/~hastie/ElemStatLearn/datasets/vowel.train&#39;
+url2 &lt;- &#39;https://web.stanford.edu/~hastie/ElemStatLearn/datasets/vowel.test&#39;
+
+download.file(url1, destfile = &#39;C:/Users/uos/Desktop/train.txt&#39;)
+download.file(url2, destfile = &#39;C:/Users/uos/Desktop/test.txt&#39;)
+
+setwd(&#39;C:/Users/uos/Desktop&#39;)
+train &lt;- fread(&#39;train.txt&#39;)
+test &lt;- fread(&#39;test.txt&#39;)
+
+glimpse(train)</code></pre>
+<pre><code>## Rows: 528
+## Columns: 12
+## $ row.names &lt;int&gt; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17...
+## $ y         &lt;int&gt; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 1, 2, 3, 4, 5, 6, 7, 8...
+## $ x.1       &lt;dbl&gt; -3.639, -3.327, -2.120, -2.287, -2.598, -2.852, -3.482, -...
+## $ x.2       &lt;dbl&gt; 0.418, 0.496, 0.894, 1.809, 1.938, 1.914, 2.524, 2.305, 2...
+## $ x.3       &lt;dbl&gt; -0.670, -0.694, -1.576, -1.498, -0.846, -0.755, -0.433, 0...
+## $ x.4       &lt;dbl&gt; 1.779, 1.365, 0.147, 1.012, 1.062, 0.825, 1.048, 1.771, 0...
+## $ x.5       &lt;dbl&gt; -0.168, -0.265, -0.707, -1.053, -1.633, -1.588, -1.995, -...
+## $ x.6       &lt;dbl&gt; 1.627, 1.933, 1.559, 1.060, 0.764, 0.855, 0.902, 0.593, 1...
+## $ x.7       &lt;dbl&gt; -0.388, -0.363, -0.579, -0.567, 0.394, 0.217, 0.322, -0.4...
+## $ x.8       &lt;dbl&gt; 0.529, 0.510, 0.676, 0.235, -0.150, -0.246, 0.450, 0.992,...
+## $ x.9       &lt;dbl&gt; -0.874, -0.621, -0.809, -0.091, 0.277, 0.238, 0.377, 0.57...
+## $ x.10      &lt;dbl&gt; -0.814, -0.488, -0.049, -0.795, -0.396, -0.365, -0.366, -...</code></pre>
+<pre class="r"><code>head(train)</code></pre>
+<pre><code>##    row.names y    x.1   x.2    x.3   x.4    x.5   x.6    x.7    x.8    x.9
+## 1:         1 1 -3.639 0.418 -0.670 1.779 -0.168 1.627 -0.388  0.529 -0.874
+## 2:         2 2 -3.327 0.496 -0.694 1.365 -0.265 1.933 -0.363  0.510 -0.621
+## 3:         3 3 -2.120 0.894 -1.576 0.147 -0.707 1.559 -0.579  0.676 -0.809
+## 4:         4 4 -2.287 1.809 -1.498 1.012 -1.053 1.060 -0.567  0.235 -0.091
+## 5:         5 5 -2.598 1.938 -0.846 1.062 -1.633 0.764  0.394 -0.150  0.277
+## 6:         6 6 -2.852 1.914 -0.755 0.825 -1.588 0.855  0.217 -0.246  0.238
+##      x.10
+## 1: -0.814
+## 2: -0.488
+## 3: -0.049
+## 4: -0.795
+## 5: -0.396
+## 6: -0.365</code></pre>
+<pre class="r"><code>head(test)</code></pre>
+<pre><code>##    row.names y    x.1    x.2    x.3    x.4    x.5   x.6    x.7   x.8    x.9
+## 1:         1 1 -1.149 -0.904 -1.988  0.739 -0.060 1.206  0.864 1.196 -0.300
+## 2:         2 2 -2.613 -0.092 -0.540  0.484  0.389 1.741  0.198 0.257 -0.375
+## 3:         3 3 -2.505  0.632 -0.593  0.304  0.496 0.824 -0.162 0.181 -0.363
+## 4:         4 4 -1.768  1.769 -1.142 -0.739 -0.086 0.120 -0.230 0.217 -0.009
+## 5:         5 5 -2.671  3.155 -0.514  0.133 -0.964 0.234 -0.071 1.192  0.254
+## 6:         6 6 -2.509  1.326  0.354  0.663 -0.724 0.418 -0.496 0.713  0.638
+##      x.10
+## 1: -0.467
+## 2: -0.604
+## 3: -0.764
+## 4: -0.279
+## 5: -0.471
+## 6: -0.204</code></pre>
+<pre class="r"><code>train &lt;- train[,-1]
+test &lt;- test[,-1]
+
+train$y &lt;- as.factor(train$y)
+test$y &lt;- as.factor(test$y)
+
+
+preproc.param &lt;- train %&gt;% 
+        preProcess(method = c(&#39;center&#39;, &#39;scale&#39;))
+
+
+train.transformed &lt;- preproc.param %&gt;% predict(train)
+test.transformed &lt;- preproc.param %&gt;% predict(test)</code></pre>
+</div>
+<div id="fit-the-model-1" class="section level1">
+<h1>fit the model</h1>
+<pre class="r"><code>model &lt;- lda(y~., data = train.transformed)
+lda.data &lt;- cbind(train.transformed, predict(model)$x)
+ggplot(lda.data, aes(LD1, LD2)) + 
+        geom_point(aes(color = y))</code></pre>
+<p><img src="index_files/figure-html/unnamed-chunk-19-1.png" width="672" />
+# prediction</p>
+<pre class="r"><code>predictions &lt;- model %&gt;% predict(test.transformed)</code></pre>
+</div>
+<div id="model-accuracy-1" class="section level1">
+<h1>model accuracy</h1>
+<pre class="r"><code>mean(predictions$class == test.transformed$y)</code></pre>
+<pre><code>## [1] 0.4437229</code></pre>
+</div>
+<div id="misclassification" class="section level1">
+<h1>misclassification</h1>
+<pre class="r"><code>1-mean(predictions$class == test.transformed$y)</code></pre>
+<pre><code>## [1] 0.5562771</code></pre>
+</div>
