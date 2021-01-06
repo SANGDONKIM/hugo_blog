@@ -10,7 +10,6 @@ tags:
 ---
 
 # LDA와 regression 사이의 유사도 설명
-# https://online.stat.psu.edu/stat508/lesson/8/8.5/8.5.1
 
 # LDA class 2개일 때 예시 
 
@@ -107,8 +106,7 @@ grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
 ```
 
 
-# LDA 링크 참고 
-# http://www.sthda.com/english/articles/36-classification-methods-essentials/146-discriminant-analysis-essentials-in-r/
+
 
 
 
@@ -265,3 +263,6 @@ mean(predictions$class == test.transformed$y)
 1-mean(predictions$class == test.transformed$y)
 ```
 
+# 참고 
+# https://online.stat.psu.edu/stat508/lesson/8/8.5/8.5.1
+# http://www.sthda.com/english/articles/36-classification-methods-essentials/146-discriminant-analysis-essentials-in-r/

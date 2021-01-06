@@ -14,9 +14,6 @@ tags:
 <div id="lda와-regression-사이의-유사도-설명" class="section level1">
 <h1>LDA와 regression 사이의 유사도 설명</h1>
 </div>
-<div id="httpsonline.stat.psu.edustat508lesson88.58.5.1" class="section level1">
-<h1><a href="https://online.stat.psu.edu/stat508/lesson/8/8.5/8.5.1" class="uri">https://online.stat.psu.edu/stat508/lesson/8/8.5/8.5.1</a></h1>
-</div>
 <div id="lda-class-2개일-때-예시" class="section level1">
 <h1>LDA class 2개일 때 예시</h1>
 <pre class="r"><code>dat &lt;- data.frame(A1=c(2.95, 2.53, 3.57, 3.16, 2.58, 2.16, 3.27), 
@@ -117,12 +114,6 @@ grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)</code></pre>
 ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
 <p><img src="index_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
-</div>
-<div id="lda-링크-참고" class="section level1">
-<h1>LDA 링크 참고</h1>
-</div>
-<div id="httpwww.sthda.comenglisharticles36-classification-methods-essentials146-discriminant-analysis-essentials-in-r" class="section level1">
-<h1><a href="http://www.sthda.com/english/articles/36-classification-methods-essentials/146-discriminant-analysis-essentials-in-r/" class="uri">http://www.sthda.com/english/articles/36-classification-methods-essentials/146-discriminant-analysis-essentials-in-r/</a></h1>
 <p>caret::createDataPartition(
 y, # 분류(또는 레이블)
 times=1, # 생성할 분할의 수
@@ -307,4 +298,13 @@ ggplot(lda.data, aes(LD1, LD2)) +
 <h1>misclassification</h1>
 <pre class="r"><code>1-mean(predictions$class == test.transformed$y)</code></pre>
 <pre><code>## [1] 0.5562771</code></pre>
+</div>
+<div id="참고" class="section level1">
+<h1>참고</h1>
+</div>
+<div id="httpsonline.stat.psu.edustat508lesson88.58.5.1" class="section level1">
+<h1><a href="https://online.stat.psu.edu/stat508/lesson/8/8.5/8.5.1" class="uri">https://online.stat.psu.edu/stat508/lesson/8/8.5/8.5.1</a></h1>
+</div>
+<div id="httpwww.sthda.comenglisharticles36-classification-methods-essentials146-discriminant-analysis-essentials-in-r" class="section level1">
+<h1><a href="http://www.sthda.com/english/articles/36-classification-methods-essentials/146-discriminant-analysis-essentials-in-r/" class="uri">http://www.sthda.com/english/articles/36-classification-methods-essentials/146-discriminant-analysis-essentials-in-r/</a></h1>
 </div>
