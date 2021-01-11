@@ -90,6 +90,23 @@ $$
 \
 
 
+The prox operatior for $g(z) = \lambda||z||_1$
+$$
+\begin{align}
+prox_{\lambda, g}(z) &= \operatorname*{argmin}_v (\lambda||z||_1 + \frac{1}{2}||z-v||_2^2) \newline
+                     &= \operatorname*{argmin}_v (||v||_1 + \frac{1}{2\cdot \lambda}||z-v||_2^2) \newline
+                     &\therefore \operatorname*{argmin}_v_i (\frac{1}{2}(v_i - z_i)^2 + \lambda|v_i|) 
+\end{align}
+$$
+
+
+
+\
+ 
+
+
+
+
 $$
 \begin{align}
 Z^{k+1} &:= \operatorname*{argmin}_Z (g(Z) + \frac{\rho}{2}||I\beta^{k+1} - IZ + \mu^k||_2^2) \newline
