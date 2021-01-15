@@ -62,6 +62,7 @@ losers <- vb_parsed %>%
                 mutate(win = "lose")
 ```
 
+
 ```{r}
 vb_df <- bind_rows(winners, losers) %>%
                 mutate_if(is.character, factor)
