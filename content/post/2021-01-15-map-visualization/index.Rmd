@@ -9,7 +9,7 @@ tags: visualization
 
 # 따릉이 데이터를 이용한 간단한 지도 그리기
 
-```{r, include=F, warning=F, message=F}
+```{r, include=F, message=F, warning=F}
 library(rgdal)
 library(rgeos)
 library(tmap)
@@ -23,7 +23,7 @@ library(tidyverse)
 
 # 데이터 불러오기 
 
-서울시 공공 자전거 대여소 정보는 https://data.seoul.go.kr/dataList/OA-13252/F/1/datasetView.do 에서 다운로드가 가능하다.\
+서울시 공공 자전거 대여소 정보는 https://data.seoul.go.kr/dataList/OA-13252/F/1/datasetView.do 에서 다운로드가 가능하다.
 참고 : stn 데이터는 링크에 있는 데이터와 다른 데이터지만 정비소 좌표만 이용하기 때문에 코드의 내용은 같다. 
 
 ## 따릉이 정비소 데이터 불러오기 
@@ -51,11 +51,11 @@ coordinates(areas)
 plot(areas)
 ```
 
-R에서 shp 파일을 불러오기 위해서는 rgdal 패키지에 있는 readOGR 함수를 이용해야한다. \
-shp 파일은 polygon 형태로 저장되어 있는 데이터인데 데이터 프레임 형태처럼 직관적이지 않기 때문에 다루기가 까다롭다. \
-R에서는 shp 파일을 다루기 위해서 대표적으로 sp, sf 패키지가 있다. \
-sf 패키지는 tidyvese와 연동이 잘되고 shp 파일을 데이터 프레임 형태로 직관적으로 볼 수 있다는 장점이 있다. 좌표변환이 sp 패키지보다 까다롭다. \
-sp 패키지는 좌표 변환이 상대적으로 쉽고, tmap 패키지를 이용하면 ggplot만큼 쉽게 시각화가 가능하다. \
+R에서 shp 파일을 불러오기 위해서는 rgdal 패키지에 있는 readOGR 함수를 이용해야한다. 
+shp 파일은 polygon 형태로 저장되어 있는 데이터인데 데이터 프레임 형태처럼 직관적이지 않기 때문에 다루기가 까다롭다. 
+R에서는 shp 파일을 다루기 위해서 대표적으로 sp, sf 패키지가 있다. 
+sf 패키지는 tidyvese와 연동이 잘되고 shp 파일을 데이터 프레임 형태로 직관적으로 볼 수 있다는 장점이 있다. 좌표변환이 sp 패키지보다 까다롭다. 
+sp 패키지는 좌표 변환이 상대적으로 쉽고, tmap 패키지를 이용하면 ggplot만큼 쉽게 시각화가 가능하다. 
 
 coordinates 함수를 이용해서 좌표를 볼 수 있다. 
 
@@ -65,11 +65,11 @@ coordinates 함수를 이용해서 좌표를 볼 수 있다.
 https://statkclee.github.io/spatial/geo-spatial-r.html
 
 
-어떤 위치를 정의할 때 지도 api별로 다른 좌표계를 사용한다. 따라서 자료를 병합할 때에는 좌표계를 똑같이 맞춰야한다. \
+어떤 위치를 정의할 때 지도 api별로 다른 좌표계를 사용한다. 따라서 자료를 병합할 때에는 좌표계를 똑같이 맞춰야한다. 
 서울시 행정지도의 좌표계를 보면 CRS arguments: +proj=longlat +datum=WGS84 +no_defs 이므로 따릉이 데이터의 좌표계를 EPSG:4326로 설정해주었다. \
-지도 시각화를 위해서는 **sp**패키지를 이용해서 csv 파일을 SpatialPointsDataFrame으로 바꿔주여야한다. \
-SpatialPointsDataFrame(**data[경도, 위도]**, data, 좌표계)이다. \
-areas@bbox %>% head() : 최소, 최대 위경도를 알 수 있다. \
+지도 시각화를 위해서는 **sp**패키지를 이용해서 csv 파일을 SpatialPointsDataFrame으로 바꿔주여야한다. 
+SpatialPointsDataFrame(**data[경도, 위도]**, data, 좌표계)이다. 
+areas@bbox %>% head() : 최소, 최대 위경도를 알 수 있다. 
 stn.points@coords %>% head() : 좌표값이 서울시 행정지도의 좌표값이 유사하게 바뀌었음을 알 수 있다. 
 
 ```{r}
@@ -80,7 +80,7 @@ stn.points@coords %>% head()
 ```
 
 # 시각화 
-시각화는 shp 파일의 좌표계 변환만 잘해주면 tmap 패키지를 이용해서 간단하게 구현이 가능하다. \
+시각화는 shp 파일의 좌표계 변환만 잘해주면 tmap 패키지를 이용해서 간단하게 구현이 가능하다. 
 
 * tm_shape() : 지도 불러오기 
 * tm_borders(alpha = 0.5) : 점을 찍을 base line map을 생성. alpha = 경계의 선명도
