@@ -1,0 +1,140 @@
+---
+title: Split the map into a grid using sf
+author: 'dondon '
+date: '2021-01-16'
+slug: split-the-map-into-a-grid-using-sf
+categories:
+  - R
+tags:
+  - visualization
+---
+
+# 지도를 격자로 나누고 대여소가 몇 번째 격자에 해당하는지 찾기
+
+
+```{r, message=F, warning=F}
+library(rgdal)
+library(sp)
+library(sf)
+library(tidyverse)
+library(data.table)
+library(plotly)
+theme_set(theme_bw())
+```
+
+
+## 따릉이 대여소 정보 데이터 불러오기 
+서울시 공공 자전거 대여소 정보는 https://data.seoul.go.kr/dataList/OA-13252/F/1/datasetView.do 에서 다운로드가 가능하다.
+
+
+```{r, message=F, warning=F}
+station <- fread('C:\\Users\\uos\\Desktop\\MASTER\\Spatial Data Analysis\\공공자전거 대여소 정보.csv')
+colnames(station) <- c('대여소번호', '대여소명', '자치구', '상세주소', 'lat', 'long', '설치시기', 'LCD거치대수', 'QR거치대수', '운영방식')
+station
+```
+
+```{r, message=F, warning=F}
+station_lcd <- station %>% filter(운영방식 == 'LCD') %>% select(대여소번호, 자치구, lat, long)
+station_QR <- station %>% filter(운영방식 == 'QR') %>% select(대여소번호, 자치구, lat, long)
+```
+
+
+## 좌표계 변환  
+
+이전 포스팅 참고 https://statistics-dondon-7781aa.netlify.app/2021/01/16/map-visualization-using-sf-package/
+
+
+```{r, message=F, warning=F}
+temp <- station_lcd
+
+colnames(temp)[c(3,4)] = c("Y","X")
+convertCoordSystem <- function(data = temp, from.crs = from.crs, to.crs = to.crs){
+  xy = data.frame(long = data$X, lat = data$Y)
+  xy = as.data.frame(apply(xy, 2, as.numeric))
+  
+  coordinates(xy) = ~long+lat
+  
+  from.crs = CRS(from.crs)
+  from.coordinates = SpatialPoints(xy, proj4string=from.crs)
+  
+  to.crs = CRS(to.crs)
+  changed = as.data.frame(SpatialPoints(spTransform(from.coordinates, to.crs)))
+  names(changed) = c("long", "lat")
+  
+  return(changed)
+}
+
+from.crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+to.crs = "+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs"
+coord = convertCoordSystem(data = temp, from.crs = from.crs, to.crs = to.crs)
+temp[,c(3,4)] = coord 
+colnames(temp)[c(3,4)] = c("X","Y")
+coordinates(temp) = ~X+Y
+temp = st_as_sf(temp , coord = c("X", "Y") , crs = 5179)
+```
+
+
+
+
+## 서울 경계구역 데이터 불러오기 
+
+대한민국 경계구역 데이터는 이전 블로그 포스팅을 참고하면 불러올 수 있다.  https://statistics-dondon-7781aa.netlify.app/2021/01/15/map-visualization/ \
+
+대한민국 경계 데이터에서 서울 데이터만 추출하였다. shp 파일에 한글이 섞여있는데 icov 함수를 이용해서 인코딩을 UTF-8로 변경하면 에러 없이 불러올 수 있다. 
+
+```{r}
+nc <- st_read('C:/Users/uos/Desktop/Master/bike sharing/CTPRVN_202005/CTPRVN.shp') %>% st_transform()
+nc$CTP_KOR_NM <- iconv(nc$CTP_KOR_NM, from = "CP949", to = "UTF-8", sub = NA, mark = TRUE, toRaw = FALSE)
+nc <- nc %>% filter(str_detect(CTP_ENG_NM, 'Seoul'))
+```
+
+## CRS 값 변경 
+
+서로 다른 데이터를 시각화할 때 좌표계가 일치하지 않으면 지도에 시각화를 할 수 없다. 따라서 반드시 좌표계를 일치시켜야만 같은 지도에 올바른 위치에 점이 찍히게 된다. st_crs 함수를 이용해서 따릉이 대여소 데이터의 좌표계와 서울 경계구역 데이터의 좌표계를 일치시켜주었다. 
+
+```{r}
+st_crs(temp) = st_crs(nc)
+
+```
+
+
+## Grid 개수 지정 
+
+지도를 몇 개의 grid로 나눌건지를 설정해야한다. 나는 서울을 $20 \times 10 = 200$ grid로 나누었다. 
+
+```{r}
+pts <- temp %>% st_sf
+
+grid_50 <- st_make_grid(nc, n = c(20, 10)) %>% 
+  st_sf(grid_id = 1:length(.))
+pts
+```
+
+## 각 grid에 대한 label 생성
+
+```{r}
+grid_lab <- st_centroid(grid_50) %>% cbind(st_coordinates(.))
+grid_lab
+```
+
+
+## 서울시 경계구역과 grid 시각화 
+
+```{r}
+ggplot() +
+  geom_sf(data = nc, fill = 'white', lwd = 0.05) +
+  geom_sf(data = pts, color = 'red', size = 1.7) + 
+  geom_sf(data = grid_50, fill = 'transparent', lwd = 0.3) +
+  geom_text(data = grid_lab, aes(x = X, y = Y, label = grid_id), size = 2) +
+  coord_sf(datum = NA)  +
+  labs(x = "") +
+  labs(y = "")
+```
+
+
+## 따릉이 대여소가 몇번째 grid에 해당하는지 찾기 
+
+```{r}
+pts %>% st_join(grid_50, join = st_intersects) %>% as.data.frame
+```
+
