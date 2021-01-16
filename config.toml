@@ -2,7 +2,7 @@ baseurl = "/"
 languageCode = "en-us"
 title = "문과생의 통계학 일기"
 theme = "hugo-lithium"
-googleAnalytics = ""
+googleAnalytics = "G-XR2GV0J0SJ"
 disqusShortname = ""
 ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_cache$", "\\.knit\\.md$", "\\.utf8\\.md$"]
 

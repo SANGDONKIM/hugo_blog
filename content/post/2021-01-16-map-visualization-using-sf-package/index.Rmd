@@ -35,17 +35,17 @@ station_QR <- station %>% filter(운영방식 == 'QR') %>% select(대여소번�
 ## 한강 데이터 불러오기 
 한강 데이터는 구글링하면 바로 구할 수 있다. 한강에서 뻗어나가는 하천 정보를 추가하고 싶으면 qgis에서 작업을 한 후에 shp 파일을 R로 불러오는 것이 가장 빠르다. 나는 한강 데이터에 북쪽의 법정하천을 추가해서 shp 파일을 만들었다.  
 
-![](themes/hugo_lithium/static/images/image_file/river.JPG){#id .class width='100%'}
 
 ```{r, message=F, warning=F}
 NA_W <- st_read("C:/Users/uos/Desktop/Master/bike sharing/river/river.shp")
-NA_W$geometry
 ```
 
 ```{r, message=F, warning=F}
 plot(NA_W, max.plot = 12)
 ```
+
 ## 좌표계 변환 
+
 이전에 포스팅한 바와 같이 위도, 경도의 순서를 바꾸고 좌표계 변환을 해주는 코드이다.  
 좌표계는 종류도 많고 복잡하기 때문에 접근하기가 쉽지 않은 것 같다. 데이터에 부여된 좌표계의 특징과 대략적인 의미만 파악해도 적용하는데는 무리가 없는 것 같다. \
 간략하게 현재 사용하는 좌표계의 특징을 살펴보면 다음과 같다. \
@@ -54,7 +54,7 @@ plot(NA_W, max.plot = 12)
 * 서비스: 네이버지도
 * CRS 스펙: +proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs 
 
-좌표계 설명 : https://www.osgeo.kr/17 \
+좌표계 설명 : https://www.osgeo.kr/17 
 좌표계 변환 코드 참고 : https://rpubs.com/KOOJA/coorinatesTransformationExample 
 
 
