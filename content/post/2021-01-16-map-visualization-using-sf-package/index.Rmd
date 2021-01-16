@@ -1,15 +1,13 @@
 ---
 title: 'Map visualization using sf package '
-author: dondon
+author: "dondon"
 date: '2021-01-16'
 slug: map-visualization-using-sf-package
-categories:
-  - R
-tags:
-  - visualization
+categories: R
+tags: visualization
 ---
 
-```{r,include=F, message=F, warning=F}
+```{r, message=F, warning=F}
 library(rgdal)
 library(sp)
 library(sf)
@@ -40,8 +38,8 @@ station_QR <- station %>% filter(운영방식 == 'QR') %>% select(대여소번�
 ![](themes/hugo_lithium/static/images/image_file/river.JPG){#id .class width='100%'}
 
 ```{r, message=F, warning=F}
-NA_W <- st_read("C:/Users/uos/Desktop/Master/bike sharing/한국하천/한국하천.shp")
-st_crs(NA_W)
+NA_W <- st_read("C:/Users/uos/Desktop/Master/bike sharing/river/river.shp")
+NA_W$geometry
 ```
 
 ```{r, message=F, warning=F}
