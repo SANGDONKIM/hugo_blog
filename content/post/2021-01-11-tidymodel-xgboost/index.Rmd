@@ -48,6 +48,7 @@ vb_parsed <- vb_matches %>%
                 na.omit()
 ```
 
+
 ```{r}
 winners <- vb_parsed %>%
                 select(circuit, gender, year,
