@@ -135,6 +135,6 @@ ggplot() +
 ## 따릉이 대여소가 몇번째 grid에 해당하는지 찾기 
 
 ```{r}
-pts %>% st_join(grid_50, join = st_intersects) %>% as.data.frame
+pts %>% st_join(grid_50, join = st_intersects) %>% as.data.frame %>% head()
 ```
 
