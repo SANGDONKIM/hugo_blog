@@ -15,7 +15,6 @@ output:
 
 # 지도를 격자로 나누고 대여소가 몇 번째 격자에 해당하는지 찾기
 
-
 ```{r, message=F, warning=F}
 library(rgdal)
 library(sp)
@@ -25,6 +24,7 @@ library(data.table)
 library(plotly)
 theme_set(theme_bw())
 ```
+
 
 
 ## 따릉이 대여소 정보 데이터 불러오기 
