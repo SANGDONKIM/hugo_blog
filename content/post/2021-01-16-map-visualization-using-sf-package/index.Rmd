@@ -5,6 +5,10 @@ date: '2021-01-16'
 slug: map-visualization-using-sf-package
 categories: R
 tags: visualization
+output:
+  blogdown::html_page:
+      number_sections: true
+      toc: TRUE
 ---
 
 ```{r, message=F, warning=F}
