@@ -7,6 +7,10 @@ categories:
   - R
 tags:
   - visualization
+output:
+  blogdown::html_page:
+      number_sections: true
+      toc: TRUE
 ---
 
 # 지도를 격자로 나누고 대여소가 몇 번째 격자에 해당하는지 찾기
