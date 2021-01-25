@@ -1,0 +1,21 @@
+---
+title: 'Gradient Boosting Regression in R  '
+author: dondon
+date: '2021-01-25'
+slug: gradient-boosting-regression-in-r
+categories:
+  - R
+tags:
+  - Machine learning
+---
+
+# psudo code
+
+Input : Data $\{x_i, y_i\}^n_{i=1}$, and a differentiable Loss function $L(y_i, F(x))$ \
+Step 1 : Initialized model with a constant value: $F_0(x) = \arg\min_{\gamma} \sum_{i=1}^n L(y_i, \gamma)$ \
+Step 2 : for $m = 1$ to M: \
+(A) Compute $r_{im} = -[{\partial L(y_i, F(x_i)) \over\partial F_(x_i)}]_{F(x) = F_{m-1}(x)}$ for $i = 1,...n$ \
+(B) Fit a regression tree to the $r_{im}$ values and create terminal regions $R_{im}$, for $j = 1,...,J_m$ \
+(C) For $j = 1,...,j_m$ compute $r_{jm} = \arg\min_{\gamma} \sum_{x_i \in R_{ij}} L(y_i, F_{m-1}(x_i) + \gamma)$ \
+(D) Update $F_m(x) = F_{m-1}(x) + \nu \sum_{j=1}^{J_m} \gamma_m I(x \in R_{jm})$
+Step 3 : Output F_M(x)
