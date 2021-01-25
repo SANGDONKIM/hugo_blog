@@ -2,7 +2,7 @@ baseurl = "/"
 languageCode = "en-us"
 title = "문과생의 통계학 일기"
 theme = "hugo-lithium"
-googleAnalytics = "G-XR2GV0J0SJ"
+googleAnalytics = "UA-187469260-1"
 disqusShortname = "https-statistics-dondon-7781aa-netlify-app"
 ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_cache$", "\\.knit\\.md$", "\\.utf8\\.md$"]
 
