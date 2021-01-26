@@ -1,0 +1,203 @@
+---
+title: 'Gradient Boosting Regression in R  '
+author: "dondon"
+date: '2021-01-25'
+slug: gradient-boosting-regression-in-r
+categories: R
+tags: Machine learning
+---
+
+<script src="{{< blogdown/postref >}}index_files/header-attrs/header-attrs.js"></script>
+
+
+<div id="gradient-boosting-regression-tree" class="section level1">
+<h1>Gradient Boosting Regression Tree</h1>
+<p>GBRT는 초기값 평균을 이용해서 첫 번째 residual tree를 생성하고 learning rate를 이용해서 값을 조정하고 여러 개의 residual tree를 더해가면서 최종 예측 모형을 산출한다.</p>
+<div id="psudo-code" class="section level2">
+<h2>psudo code</h2>
+<p>Input : Data <span class="math inline">\(\{x_i, y_i\}^n_{i=1}\)</span>, and a differentiable Loss function <span class="math inline">\(L(y_i, F(x))\)</span><br />
+Step 1 : Initialized model with a constant value: <span class="math inline">\(F_0(x) = \arg\min_{\gamma} \sum_{i=1}^n L(y_i, \gamma)\)</span><br />
+Step 2 : for <span class="math inline">\(m = 1\)</span> to M:<br />
+(A) Compute <span class="math inline">\(r_{im} = -[{\partial L(y_i, F(x_i)) \over\partial F_(x_i)}]_{F(x) = F_{m-1}(x)}\)</span> for <span class="math inline">\(i = 1,...n\)</span><br />
+(B) Fit a regression tree to the <span class="math inline">\(r_{im}\)</span> values and create terminal regions <span class="math inline">\(R_{im}\)</span>, for <span class="math inline">\(j = 1,...,J_m\)</span><br />
+(C) For <span class="math inline">\(j = 1,...,j_m\)</span> compute <span class="math inline">\(r_{jm} = \arg\min_{\gamma} \sum_{x_i \in R_{ij}} L(y_i, F_{m-1}(x_i) + \gamma)\)</span><br />
+(D) Update <span class="math inline">\(F_m(x) = F_{m-1}(x) + \nu \sum_{j=1}^{J_m} \gamma_m I(x \in R_{jm})\)</span><br />
+Step 3 : Output <span class="math inline">\(F_M(x)\)</span></p>
+</div>
+<div id="details" class="section level2">
+<h2>Details</h2>
+<ol style="list-style-type: decimal">
+<li>Input : Data <span class="math inline">\(\{x_i, y_i\}^n_{i=1}\)</span>, and a differentiable Loss function <span class="math inline">\(L(y_i, F(x))\)</span></li>
+</ol>
+<p>미분 가능한 loss function으로 GBM에서는 L2 norm을 선택한다. 이 때 <span class="math inline">\(\frac{1}{2}\)</span>는 계산상의 편의를 위해서 scaling constant이다.<br />
+Loss function : <span class="math inline">\(L(y_i, F(x)) = \frac{1}{2} \sum_{i=1}^n (y_i -F(x))^2\)</span></p>
+<pre class="r"><code>loss &lt;- function(y, yhat){
+                return(mean(1/2*(y-yhat)^2))
+}</code></pre>
+<ol start="2" style="list-style-type: decimal">
+<li>Step 1 : Initialized model with a constant value: <span class="math inline">\(F_0(x) = \arg\min_{\gamma} \sum_{i=1}^n L(y_i, \gamma)\)</span><br />
+</li>
+</ol>
+<p><span class="math display">\[
+\begin{align}
+F_0(x) &amp;= \arg\min_{\gamma} \sum_{i=1}^n L(y_i, \gamma) \newline
+&amp;={d \over d\gamma} \frac{1}{2} \sum_{i=1}^n (y_i -\gamma^2)\newline
+&amp;= -\sum_{i=1}^n(y_i - \gamma) \newline
+&amp;= 0 \newline
+&amp;\Leftrightarrow \hat{\gamma} = \bar{y}
+\end{align} 
+\]</span></p>
+<p>초기값은 y의 평균으로 계산한다.</p>
+<ol start="3" style="list-style-type: decimal">
+<li><ol style="list-style-type: upper-alpha">
+<li>Compute <span class="math inline">\(r_{im} = -[{\partial L(y_i, F(x_i)) \over\partial F_(x_i)}]_{F(x) = F_{m-1}(x)}\)</span> for <span class="math inline">\(i = 1,...n\)</span></li>
+</ol>
+<p><span class="math display">\[
+\begin{align}
+r_{im} &amp;= -[{\partial L(y_i, F(x_i)) \over\partial F_(x_i)}]_{F(x) = F_{m-1}(x)}, \quad i = 1,...n, \quad m = \#tree \newline
+&amp;\Leftrightarrow r_{im} = y_i - F_{m-1}(x_i)
+\end{align}
+\]</span></p>
+<p><span class="math inline">\(r_{im}\)</span>은 negative gradient or pseudo residual이라고 한다. GBM은 residual을 기반으로 regression tree를 생성하는데 이 때 이용되는 residual 값이 <span class="math inline">\(r_{im}\)</span>으로 계산된 pseudo residual이다.</p></li>
+</ol>
+<pre class="r"><code>negative_residual &lt;- function(y, yhat) {
+                return(y - yhat)
+}</code></pre>
+<ol start="4" style="list-style-type: decimal">
+<li><ol start="2" style="list-style-type: upper-alpha">
+<li>Fit a regression tree to the <span class="math inline">\(r_{im}\)</span> values and create terminal regions <span class="math inline">\(R_{im}\)</span>, for <span class="math inline">\(j = 1,...,J_m\)</span></li>
+</ol>
+<p>tree의 깊이는 보통 8~32 정도로 구성된다. full tree가 아닌 weak learner or weak tree를 만들기 때문에 tree의 terminal regions <span class="math inline">\(R_{im}\)</span> 에는 여러 개의 값이 존재할 수 있다.</p></li>
+<li><ol start="3" style="list-style-type: upper-alpha">
+<li>For <span class="math inline">\(j = 1,...,j_m\)</span> compute <span class="math inline">\(r_{jm} = \arg\min_{\gamma} \sum_{x_i \in R_{ij}} L(y_i, F_{m-1}(x_i) + \gamma)\)</span></li>
+</ol>
+<p>이 때 tree의 terminal regions <span class="math inline">\(R_{im}\)</span> 에 존재하는 여러 개의 값은 <span class="math inline">\(r_{jm}\)</span> : terminal region의 평균으로 계산된다.</p></li>
+</ol>
+<p><span class="math display">\[
+\begin{align}
+r_{jm} &amp;= \arg\min_{\gamma} \sum_{x_i \in R_{ij}} L(y_i, F_{m-1}(x_i) + \gamma) \newline
+       &amp;=\arg\min_{\gamma} \sum_{x_i \in R_{ij}}\frac{1}{2}(y_i - (F_{m-1}(x_i)+\gamma)) \newline 
+       &amp;\Leftrightarrow -\sum_{x_i \in R_{ij}}(y_i - F_{m-1}(x_i)-\gamma)) = 0 \newline
+       &amp;\Leftrightarrow \hat{\gamma} := terminal\; region의\;평균 
+\end{align}
+\]</span></p>
+<ol start="6" style="list-style-type: decimal">
+<li><ol start="4" style="list-style-type: upper-alpha">
+<li>Update <span class="math inline">\(F_m(x) = F_{m-1}(x) + \nu \sum_{j=1}^{J_m} \gamma_m I(x \in R_{jm})\)</span></li>
+</ol></li>
+</ol>
+<p>완성된 tree는 <span class="math inline">\(\sum_{j=1}^{J_m} \gamma_m I(x \in R_{jm})\)</span> 로 표현되며 learning rate <span class="math inline">\(\nu\)</span>를 이용해서 예측값에 대한 개별 tree의 영향력을 조절한다. <span class="math inline">\(\nu\)</span>가 작으면 개별 tree의 영향력이 줄어들고, 계산량이 많아지지만 accuracy는 향상된다. <span class="math inline">\(\nu\)</span>가 크면 개별 tree의 영향력이 커지고, 계산량이 상대적으로 적으며, accuracy가 상대적으로 줄어든다.</p>
+<div id="full-code" class="section level3">
+<h3>Full code</h3>
+<p>구글 서치 중에 OLS 기반으로 gradient boosting 수행하는 코드를 발견했는데 gradient boosting 알고리즘을 이해하는데 많은 도움이 되었다(실제 패키지에서는 regression tree 기반으로 계산되기 때문에 theta 값은 계산되지 않는다)</p>
+<pre class="r"><code>grad_boost &lt;- function(formula, data, nu = 0.01, stop, 
+                       grad.fun, loss.fun, yhat.init = 0) {
+  
+  data &lt;- as.data.frame(data)
+  formula &lt;- terms.formula(formula)
+  X &lt;- model.matrix(formula, data)
+  
+  y &lt;- data[, as.character(formula)[2]] # as.character(formula)[2] : formula y~.에서 y에 해당하는 명칭
+
+  fit &lt;- yhat.init
+  
+  u &lt;- grad.fun(y = y, yhat = fit) # pseudo residual 계산 
+  
+  theta &lt;- rep(0, ncol(X))
+  
+  loss &lt;- c()
+ 
+  for (i in 1:stop) {
+    
+    # Design matrix를 이용한 regression, OLS 기반, Tree X 
+    base_prod &lt;- lm.fit(x = X, y = u) 
+    theta_i &lt;- coef(base_prod)
+    
+    # theta 값 업데이트 
+    theta &lt;- theta + nu*as.vector(theta_i)
+    
+    # yhat 값 업데이트
+    fit &lt;- fit + nu * fitted(base_prod)
+    
+    # pseudo residual 계산
+    u &lt;- grad.fun(y = y, yhat = fit)
+    
+    # loss 값 업데이트 
+    loss &lt;- append(loss, loss.fun(y = y, yhat = fit))
+  }  
+  names(theta) &lt;- colnames(X)
+  return(list(theta = theta, u = u, fit = fit, loss = loss, 
+              formula = formula, data = data))
+}
+
+fit &lt;- grad_boost(formula = Sepal.Length~Sepal.Width + Petal.Length + Petal.Width + Species, data = iris, stop = 1000, grad.fun = negative_residual, loss.fun = loss)
+fit$theta</code></pre>
+<pre><code>##       (Intercept)       Sepal.Width      Petal.Length       Petal.Width 
+##         2.1711726         0.4958675         0.8292081        -0.3151416 
+## Speciesversicolor  Speciesvirginica 
+##        -0.7235307        -1.0234536</code></pre>
+</div>
+<div id="package" class="section level3">
+<h3>package</h3>
+<p>패키지는 Tree 기반으로 계산되므로 고정된 coefficient 결과를 산출하지 않는다.<br />
+대신에 feature importance 값으로 변수별 상대적인 영향력을 볼 수 있다.<br />
+</p>
+<ul>
+<li><p>n.trees : tree의 갯수(the number of gradient boosting iteration), pseudo code에서 <span class="math inline">\(M\)</span>에 해당</p></li>
+<li><p>interaction.depth : tree당 최대 노드의 개수, 보통 8~32</p></li>
+<li><p>shringkage : learning rate(<span class="math inline">\(\nu\)</span>)</p></li>
+<li><p>n.minobsinnode : terminal nodes의 최소 관찰값의 수</p></li>
+<li><p>bag.fraction (Subsampling fraction) : training set을 나눌 비율. 기본적으로 stochastic gradient boosting 전략 채택. default : 0.5</p></li>
+<li><p>train.fraction : 첫 train.fraction * nrows(data) 관찰값은 gbm fitting에 사용되고 나머지는 loss function에서의 out-of-sample 추정량을 계산하는데 사용됨. default = 1</p></li>
+<li><p>cv.folds : cross validation fold의 개수</p></li>
+<li><p>verbose : 모델 진행 상황을 모니터링할건지 유무</p></li>
+<li><p>distribution : 분류 문제일 경우 - bernoulli, multinomial, regression 문제일 경우 - gaussian or tdist</p></li>
+</ul>
+<p>보통 bag.fraction, train.fraction은 따로 지정하지 않음.</p>
+<pre class="r"><code>library(gbm)
+fit_pack &lt;- gbm(formula = Sepal.Length~Sepal.Width + Petal.Length + Petal.Width + Species, 
+                data = iris, 
+                verbose = T, 
+                shrinkage = 0.01, 
+                distribution = &#39;gaussian&#39;)</code></pre>
+<pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
+##      1        0.6731             nan     0.0100    0.0080
+##      2        0.6660             nan     0.0100    0.0075
+##      3        0.6570             nan     0.0100    0.0076
+##      4        0.6491             nan     0.0100    0.0078
+##      5        0.6427             nan     0.0100    0.0073
+##      6        0.6351             nan     0.0100    0.0071
+##      7        0.6278             nan     0.0100    0.0069
+##      8        0.6200             nan     0.0100    0.0071
+##      9        0.6135             nan     0.0100    0.0044
+##     10        0.6057             nan     0.0100    0.0063
+##     20        0.5415             nan     0.0100    0.0059
+##     40        0.4417             nan     0.0100    0.0040
+##     60        0.3705             nan     0.0100    0.0030
+##     80        0.3167             nan     0.0100    0.0022
+##    100        0.2728             nan     0.0100    0.0017</code></pre>
+<pre class="r"><code>summary(fit_pack)</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<pre><code>##                       var   rel.inf
+## Petal.Length Petal.Length 93.456735
+## Petal.Width   Petal.Width  6.543265
+## Sepal.Width   Sepal.Width  0.000000
+## Species           Species  0.000000</code></pre>
+<p>pretty.gbm.tree()를 이용하면 개별 tree를 적합할 때 진행상황을 모니터링할 수 있다. 여기서의 predict 값은 개별 tree에 대한 값이므로 pseudo residual 값에 해당한다. 참고 3</p>
+<pre class="r"><code>pretty.gbm.tree(fit_pack, i = 1)</code></pre>
+<pre><code>##   SplitVar SplitCodePred LeftNode RightNode MissingNode ErrorReduction Weight
+## 0        1   4.250000000        1         2           3       29.23337     75
+## 1       -1  -0.005347619       -1        -1          -1        0.00000     35
+## 2       -1   0.007166667       -1        -1          -1        0.00000     40
+## 3       -1   0.001326667       -1        -1          -1        0.00000     75
+##     Prediction
+## 0  0.001326667
+## 1 -0.005347619
+## 2  0.007166667
+## 3  0.001326667</code></pre>
+<p>참고 1 : <a href="https://www.youtube.com/watch?v=2xudPOBz-vs&amp;list=PLblh5JKOoLUJjeXUvUE0maghNuY2_5fY6&amp;index=2" class="uri">https://www.youtube.com/watch?v=2xudPOBz-vs&amp;list=PLblh5JKOoLUJjeXUvUE0maghNuY2_5fY6&amp;index=2</a></p>
+<p>참고 2 : <a href="https://medium.com/@statworx_blog/coding-gradient-boosted-machines-in-100-lines-of-code-d06b1d7bc084" class="uri">https://medium.com/@statworx_blog/coding-gradient-boosted-machines-in-100-lines-of-code-d06b1d7bc084</a></p>
+<p>참고 3 : <a href="https://stats.stackexchange.com/questions/237582/interpretation-of-gbm-single-tree-prediction-in-pretty-gbm-tree" class="uri">https://stats.stackexchange.com/questions/237582/interpretation-of-gbm-single-tree-prediction-in-pretty-gbm-tree</a></p>
+</div>
+</div>
+</div>
