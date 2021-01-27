@@ -13,8 +13,8 @@ tags: Machine learning
 <div id="gradient-boosting-regression-tree" class="section level1">
 <h1>Gradient Boosting Regression Tree</h1>
 <p>GBRT는 초기값 평균을 이용해서 첫 번째 residual tree를 생성하고 learning rate를 이용해서 값을 조정하고 여러 개의 residual tree를 더해가면서 최종 예측 모형을 산출한다.</p>
-<div id="psudo-code" class="section level2">
-<h2>psudo code</h2>
+<div id="pseudo-code" class="section level2">
+<h2>Pseudo code</h2>
 <p>Input : Data <span class="math inline">\(\{x_i, y_i\}^n_{i=1}\)</span>, and a differentiable Loss function <span class="math inline">\(L(y_i, F(x))\)</span><br />
 Step 1 : Initialized model with a constant value: <span class="math inline">\(F_0(x) = \arg\min_{\gamma} \sum_{i=1}^n L(y_i, \gamma)\)</span><br />
 Step 2 : for <span class="math inline">\(m = 1\)</span> to M:<br />
@@ -137,8 +137,8 @@ fit$theta</code></pre>
 ## Speciesversicolor  Speciesvirginica 
 ##        -0.7235307        -1.0234536</code></pre>
 </div>
-<div id="package" class="section level3">
-<h3>package</h3>
+<div id="using-gbm-package" class="section level3">
+<h3>Using GBM package</h3>
 <p>패키지는 Tree 기반으로 계산되므로 고정된 coefficient 결과를 산출하지 않는다.<br />
 대신에 feature importance 값으로 변수별 상대적인 영향력을 볼 수 있다.<br />
 </p>
@@ -153,7 +153,9 @@ fit$theta</code></pre>
 <li><p>verbose : 모델 진행 상황을 모니터링할건지 유무</p></li>
 <li><p>distribution : 분류 문제일 경우 - bernoulli, multinomial, regression 문제일 경우 - gaussian or tdist</p></li>
 </ul>
-<p>보통 bag.fraction, train.fraction은 따로 지정하지 않음.</p>
+<p><strong>보통 bag.fraction, train.fraction은 따로 지정하지 않음.</strong></p>
+<div id="r-code" class="section level4">
+<h4>R code</h4>
 <pre class="r"><code>library(gbm)
 fit_pack &lt;- gbm(formula = Sepal.Length~Sepal.Width + Petal.Length + Petal.Width + Species, 
                 data = iris, 
@@ -161,43 +163,44 @@ fit_pack &lt;- gbm(formula = Sepal.Length~Sepal.Width + Petal.Length + Petal.Wid
                 shrinkage = 0.01, 
                 distribution = &#39;gaussian&#39;)</code></pre>
 <pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
-##      1        0.6731             nan     0.0100    0.0080
-##      2        0.6660             nan     0.0100    0.0075
-##      3        0.6570             nan     0.0100    0.0076
-##      4        0.6491             nan     0.0100    0.0078
-##      5        0.6427             nan     0.0100    0.0073
-##      6        0.6351             nan     0.0100    0.0071
-##      7        0.6278             nan     0.0100    0.0069
-##      8        0.6200             nan     0.0100    0.0071
-##      9        0.6135             nan     0.0100    0.0044
-##     10        0.6057             nan     0.0100    0.0063
-##     20        0.5415             nan     0.0100    0.0059
-##     40        0.4417             nan     0.0100    0.0040
-##     60        0.3705             nan     0.0100    0.0030
-##     80        0.3167             nan     0.0100    0.0022
-##    100        0.2728             nan     0.0100    0.0017</code></pre>
+##      1        0.6733             nan     0.0100    0.0078
+##      2        0.6651             nan     0.0100    0.0078
+##      3        0.6566             nan     0.0100    0.0080
+##      4        0.6487             nan     0.0100    0.0080
+##      5        0.6408             nan     0.0100    0.0075
+##      6        0.6342             nan     0.0100    0.0074
+##      7        0.6267             nan     0.0100    0.0075
+##      8        0.6203             nan     0.0100    0.0072
+##      9        0.6132             nan     0.0100    0.0067
+##     10        0.6056             nan     0.0100    0.0067
+##     20        0.5405             nan     0.0100    0.0055
+##     40        0.4407             nan     0.0100    0.0042
+##     60        0.3693             nan     0.0100    0.0033
+##     80        0.3140             nan     0.0100    0.0024
+##    100        0.2733             nan     0.0100    0.0016</code></pre>
 <pre class="r"><code>summary(fit_pack)</code></pre>
 <p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
 <pre><code>##                       var   rel.inf
-## Petal.Length Petal.Length 93.456735
-## Petal.Width   Petal.Width  6.543265
+## Petal.Length Petal.Length 93.669666
+## Petal.Width   Petal.Width  6.330334
 ## Sepal.Width   Sepal.Width  0.000000
 ## Species           Species  0.000000</code></pre>
-<p>pretty.gbm.tree()를 이용하면 개별 tree를 적합할 때 진행상황을 모니터링할 수 있다. 여기서의 predict 값은 개별 tree에 대한 값이므로 pseudo residual 값에 해당한다. 참고 3</p>
 <pre class="r"><code>pretty.gbm.tree(fit_pack, i = 1)</code></pre>
 <pre><code>##   SplitVar SplitCodePred LeftNode RightNode MissingNode ErrorReduction Weight
-## 0        1   4.250000000        1         2           3       29.23337     75
-## 1       -1  -0.005347619       -1        -1          -1        0.00000     35
-## 2       -1   0.007166667       -1        -1          -1        0.00000     40
-## 3       -1   0.001326667       -1        -1          -1        0.00000     75
-##     Prediction
-## 0  0.001326667
-## 1 -0.005347619
-## 2  0.007166667
-## 3  0.001326667</code></pre>
+## 0        1  4.600000e+00        1         2           3       29.86221     75
+## 1       -1 -5.410078e-03       -1        -1          -1        0.00000     43
+## 2       -1  7.347917e-03       -1        -1          -1        0.00000     32
+## 3       -1  3.333333e-05       -1        -1          -1        0.00000     75
+##      Prediction
+## 0  3.333333e-05
+## 1 -5.410078e-03
+## 2  7.347917e-03
+## 3  3.333333e-05</code></pre>
+<p>pretty.gbm.tree()를 이용하면 개별 tree를 적합할 때 진행상황을 모니터링할 수 있다. 여기서의 predict 값은 개별 tree에 대한 값이므로 pseudo residual 값에 해당한다(참고 3).</p>
 <p>참고 1 : <a href="https://www.youtube.com/watch?v=2xudPOBz-vs&amp;list=PLblh5JKOoLUJjeXUvUE0maghNuY2_5fY6&amp;index=2" class="uri">https://www.youtube.com/watch?v=2xudPOBz-vs&amp;list=PLblh5JKOoLUJjeXUvUE0maghNuY2_5fY6&amp;index=2</a></p>
 <p>참고 2 : <a href="https://medium.com/@statworx_blog/coding-gradient-boosted-machines-in-100-lines-of-code-d06b1d7bc084" class="uri">https://medium.com/@statworx_blog/coding-gradient-boosted-machines-in-100-lines-of-code-d06b1d7bc084</a></p>
 <p>참고 3 : <a href="https://stats.stackexchange.com/questions/237582/interpretation-of-gbm-single-tree-prediction-in-pretty-gbm-tree" class="uri">https://stats.stackexchange.com/questions/237582/interpretation-of-gbm-single-tree-prediction-in-pretty-gbm-tree</a></p>
+</div>
 </div>
 </div>
 </div>
