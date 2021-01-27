@@ -1,0 +1,10 @@
+---
+title: 'tmap package in R '
+author: dondon
+date: '2021-01-27'
+slug: tmap-package-in-r
+categories:
+  - R
+tags:
+  - visualization
+---

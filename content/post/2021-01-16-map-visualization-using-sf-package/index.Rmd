@@ -1,5 +1,5 @@
 ---
-title: 'Map visualization using sf package '
+title: '따릉이 대여소와 한강까지의 최단거리 구하기 '
 author: "dondon"
 date: '2021-01-16'
 slug: map-visualization-using-sf-package
@@ -18,8 +18,6 @@ library(sf)
 library(tidyverse)
 library(data.table)
 ```
-
-# 따릉이 대여소에서 한강까지의 최단거리 구하기  
 
 ## 따릉이 대여소 정보 데이터 불러오기 
 서울시 공공 자전거 대여소 정보는 https://data.seoul.go.kr/dataList/OA-13252/F/1/datasetView.do 에서 다운로드가 가능하다.
