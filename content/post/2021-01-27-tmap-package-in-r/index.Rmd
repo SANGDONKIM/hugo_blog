@@ -75,7 +75,7 @@ areas@bbox %>% head()
 stn.points@coords %>% head()
 ```
 
-## tmap 패키지를 이용한 시각화 
+## tmap 패키지를 이용한 시각화
 
 tmap 패키지는 sp, leaflet 패키지와 잘 연동된다. 시각화는 ggplot의 로직과 거의 비슷하다.
 
@@ -121,7 +121,7 @@ tm_shape(areas) +
                 tm_layout(legend.text.size = 0.8, legend.title.size = 1.1, frame = FALSE)
 ```
 
-## leaflet 패키지를 이용한 interactive plot 
+## leaflet 패키지를 이용한 interactive plot
 
 tmap은 leaflet 패키지와 간단하게 연동이 가능하다. tmap_mode를 지정하고 tmap 함수를 그대로 적용하면 된다.
 
