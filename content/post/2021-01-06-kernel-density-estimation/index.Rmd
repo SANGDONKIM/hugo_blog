@@ -16,9 +16,9 @@ editor_options:
 확률밀도함수(pdf)는 확률변수의 분포를 나타내는 함수로 보통 확률변수가 연속형일 때를 지칭한다.
 확률 밀도 함수는 두 가지 조건을 만족해야 한다.
 
--    모든 실수값 x에 대해 $f(x)\ge 0$
+-   모든 실수값 x에 대해 $f(x)\ge 0$
 
--    $\int_{-\infty}^{\infty} f(x) dx$=1
+-   $\int_{-\infty}^{\infty} f(x) dx$=1
 
 pdf 조건에서 알 수 있듯이 확률밀도함수는 확률이 아니며, 확률밀도함수를 적분해야만 확률이 나온다.
 
@@ -263,4 +263,4 @@ lines(y, dexp(y, 1), lty = 2)
 
 참고 1 : <https://medium.com/analytics-vidhya/kernel-density-estimation-kernel-construction-and-bandwidth-optimization-using-maximum-b1dfce127073>
 
-참고 2 : [chrome-extension://ohfgljdgelakfkefopgklcohadegdpjf/file:///C:/Users/uos/Downloads/%EA%B8%B0%EC%B4%88%ED%86%B5%EA%B3%84%ED%95%99%EC%9D%98%20%EC%88%A8%EC%9D%80%EC%9B%90%EB%A6%AC%20%EC%9D%B4%ED%95%B4%ED%95%98%EA%B8%B0\_%ED%99%95%EB%A5%A0%EB%B0%80%EB%8F%84%20(1).pdf](chrome-extension://ohfgljdgelakfkefopgklcohadegdpjf/file:///C:/Users/uos/Downloads/%EA%B8%B0%EC%B4%88%ED%86%B5%EA%B3%84%ED%95%99%EC%9D%98%20%EC%88%A8%EC%9D%80%EC%9B%90%EB%A6%AC%20%EC%9D%B4%ED%95%B4%ED%95%98%EA%B8%B0_%ED%99%95%EB%A5%A0%EB%B0%80%EB%8F%84%20(1).pdf){.uri}
+참고 2 : statistical computing with R second edition
