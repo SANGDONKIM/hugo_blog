@@ -1,20 +1,95 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>A Hugo website</title>
+    <title>문과생의 통계학 일기</title>
     <link>/</link>
-    <description>Recent content on A Hugo website</description>
+    <description>Recent content on 문과생의 통계학 일기</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 30 Dec 2016 21:49:57 -0700</lastBuildDate><atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 27 Jan 2021 00:00:00 +0000</lastBuildDate><atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>A Plain Markdown Post</title>
-      <link>/2016/12/30/a-plain-markdown-post/</link>
-      <pubDate>Fri, 30 Dec 2016 21:49:57 -0700</pubDate>
+      <title>ADMM</title>
+      <link>/2021/01/27/admm/</link>
+      <pubDate>Wed, 27 Jan 2021 00:00:00 +0000</pubDate>
       
-      <guid>/2016/12/30/a-plain-markdown-post/</guid>
-      <description>This is a post written in plain Markdown (*.md) instead of R Markdown (*.Rmd). The major differences are:
- You cannot run any R code in a plain Markdown document, whereas in an R Markdown document, you can embed R code chunks (```{r}); A plain Markdown post is rendered through Blackfriday, and an R Markdown document is compiled by rmarkdown and Pandoc.  There are many differences in syntax between Blackfriday&amp;rsquo;s Markdown and Pandoc&amp;rsquo;s Markdown.</description>
+      <guid>/2021/01/27/admm/</guid>
+      <description>scaled dual ADMM algorithmGiven x, z and , to some initial value.
+Repeat:
+\(x:= \arg\max_{x}(f(x) + \frac{\rho}{2}\|Ax+Bz-c+\mu\|_2^2)\)\(x:= \arg\max_{x}(g(z) + \frac{\rho}{2}\|Ax+Bz-c+\mu\|_2^2)\)\(\mu:= \mu + (Ax + Bz - c)\)Stopping criterion : quit \(\|r\|_2&amp;lt;\epsilon\) and \(\|s\|_2&amp;lt;\epsilon\) Stopping criterionWe can define the primal and dual residuals in ADMM at step k+1.
+* Primal residuals : \(r^{k+1} = Ax^{k+1} + Bz^{k+1} - c\)</description>
+    </item>
+    
+    <item>
+      <title>tmap package in R </title>
+      <link>/2021/01/27/tmap-package-in-r/</link>
+      <pubDate>Wed, 27 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/01/27/tmap-package-in-r/</guid>
+      <description>library(data.table)library(sp)library(rgeos)library(rgdal)library(tidyverse)library(tmap)tmap 패키지 튜토리얼서울시 따릉이 데이터 불러오기tutorial을 위해서 서울시 따릉이 데이터를 활용한다.
+서울시 따릉이 데이터는 https://data.seoul.go.kr/dataList/OA-13252/F/1/datasetView.do 에서 다운로드가 가능하다.
+station &amp;lt;- fread(&amp;#39;C:\\Users\\uos\\Desktop\\MASTER\\Spatial Data Analysis\\공공자전거 대여소 정보.csv&amp;#39;)colnames(station) &amp;lt;- c(&amp;#39;대여소번호&amp;#39;, &amp;#39;대여소명&amp;#39;, &amp;#39;자치구&amp;#39;, &amp;#39;상세주소&amp;#39;, &amp;#39;lat&amp;#39;, &amp;#39;long&amp;#39;, &amp;#39;설치시기&amp;#39;, &amp;#39;LCD거치대수&amp;#39;, &amp;#39;QR거치대수&amp;#39;, &amp;#39;운영방식&amp;#39;)station %&amp;gt;% names()## [1] &amp;quot;대여소번호&amp;quot; &amp;quot;대여소명&amp;quot; &amp;quot;자치구&amp;quot; &amp;quot;상세주소&amp;quot; &amp;quot;lat&amp;quot; ## [6] &amp;quot;long&amp;quot; &amp;quot;설치시기&amp;quot; &amp;quot;LCD거치대수&amp;quot; &amp;quot;QR거치대수&amp;quot; &amp;quot;운영방식&amp;quot;station## 대여소번호 대여소명 자치구## 1: 1695 월계미륭아파트 정문 노원구## 2: 2301 현대고등학교 건너편 강남구## 3: 2302 교보타워 버스정류장(신논현역 3번출구 후면) 강남구## 4: 2303 논현역 7번출구 강남구## 5: 2304 신영 ROYAL PALACE 앞 강남구## --- ## 2079: 2547 포드서초서비스센터앞 서초구## 2080: 1573 현대성우아파트 옆 강북구## 2081: 1268 몽촌토성역 1번출구 옆 송파구## 2082: 1267 올림픽공원 남2문 앞 송파구## 2083: 583 청계천 생태교실 앞 성동구## 상세주소 lat long 설치시기## 1: 노원구 월계동 14 37.</description>
+    </item>
+    
+    <item>
+      <title>Split the map into a grid using sf</title>
+      <link>/2021/01/16/split-the-map-into-a-grid-using-sf/</link>
+      <pubDate>Sat, 16 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/01/16/split-the-map-into-a-grid-using-sf/</guid>
+      <description>1 지도를 격자로 나누고 대여소가 몇 번째 격자에 해당하는지 찾기1.1 따릉이 대여소 정보 데이터 불러오기1.2 좌표계 변환1.3 서울 경계구역 데이터 불러오기1.4 CRS 값 변경1.5 Grid 개수 지정1.6 각 grid에 대한 label 생성1.7 서울시 경계구역과 grid 시각화1.8 따릉이 대여소가 몇번째 grid에 해당하는지 찾기1 지도를 격자로 나누고 대여소가 몇 번째 격자에 해당하는지 찾기library(rgdal)library(sp)library(sf)library(tidyverse)library(data.</description>
+    </item>
+    
+    <item>
+      <title>따릉이 대여소와 한강까지의 최단거리 구하기 </title>
+      <link>/2021/01/16/map-visualization-using-sf-package/</link>
+      <pubDate>Sat, 16 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/01/16/map-visualization-using-sf-package/</guid>
+      <description>1 따릉이 대여소에서 한강까지의 최단거리 구하기1.1 따릉이 대여소 정보 데이터 불러오기1.2 한강 데이터 불러오기1.3 좌표계 변환1.4 따릉이 대여소와 한강 사이의 최단거리 구하기1.5 데이터 병합library(rgdal)library(sp)library(sf)library(tidyverse)library(data.table)1 따릉이 대여소에서 한강까지의 최단거리 구하기1.1 따릉이 대여소 정보 데이터 불러오기서울시 공공 자전거 대여소 정보는 https://data.seoul.go.kr/dataList/OA-13252/F/1/datasetView.do 에서 다운로드가 가능하다.
+station &amp;lt;- fread(&amp;#39;C:\\Users\\uos\\Desktop\\MASTER\\Spatial Data Analysis\\공공자전거 대여소 정보.csv&amp;#39;)colnames(station) &amp;lt;- c(&amp;#39;대여소번호&amp;#39;, &amp;#39;대여소명&amp;#39;, &amp;#39;자치구&amp;#39;, &amp;#39;상세주소&amp;#39;, &amp;#39;lat&amp;#39;, &amp;#39;long&amp;#39;, &amp;#39;설치시기&amp;#39;, &amp;#39;LCD거치대수&amp;#39;, &amp;#39;QR거치대수&amp;#39;, &amp;#39;운영방식&amp;#39;)station## 대여소번호 대여소명 자치구## 1: 1695 월계미륭아파트 정문 노원구## 2: 2301 현대고등학교 건너편 강남구## 3: 2302 교보타워 버스정류장(신논현역 3번출구 후면) 강남구## 4: 2303 논현역 7번출구 강남구## 5: 2304 신영 ROYAL PALACE 앞 강남구## --- ## 2079: 2547 포드서초서비스센터앞 서초구## 2080: 1573 현대성우아파트 옆 강북구## 2081: 1268 몽촌토성역 1번출구 옆 송파구## 2082: 1267 올림픽공원 남2문 앞 송파구## 2083: 583 청계천 생태교실 앞 성동구## 상세주소 lat long 설치시기## 1: 노원구 월계동 14 37.</description>
+    </item>
+    
+    <item>
+      <title>EM algorithm</title>
+      <link>/2021/01/06/em-algorithm/</link>
+      <pubDate>Wed, 06 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/01/06/em-algorithm/</guid>
+      <description>EM 알고리즘 설명EM 알고리즘 정의EM algorithm for Two component Gaussian Mixture
+### motivationdat &amp;lt;- c(-0.39, 0.12, 0.94, 1.67, 1.76, 2.44, 3.72, 4.28, 4.92, 5.53,0.06, 0.48, 1.01, 1.68, 1.80, 3.25, 4.12, 4.60, 5.28, 6.22)hist(dat, probability = T, breaks = seq(-0.5, 6.5, length.out = 15), main = &amp;#39;&amp;#39;)n = 20 데이터는 bimodal 형태를 띄고 있다. 이 데이터는 어떤 분포로부터 나왔는가?우리가 아는 대부분의 분포는 unimodal(단봉) 형태로 bimodal(쌍봉) 형태에 대해서는 잘 모른다.</description>
+    </item>
+    
+    <item>
+      <title>kernel density estimation</title>
+      <link>/2021/01/06/kernel-density-estimation/</link>
+      <pubDate>Wed, 06 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/01/06/kernel-density-estimation/</guid>
+      <description>probability density function확률밀도함수(pdf)는 확률변수의 분포를 나타내는 함수로 보통 확률변수가 연속형일 때를 지칭한다.확률 밀도 함수는 두 가지 조건을 만족해야 한다.- 모든 실수값 x에 대해 \(f(x)\ge 0\)- \(\int_{-\infty}^{\infty} f(x) dx\)=1pdf 조건에서 알 수 있듯이 확률밀도함수는 확률이 아니며, 확률밀도함수를 적분해야만 확률이 나온다.
+
+probability density확률 밀도는 \(X=x_0\)일 때 확률밀도함수(\(f(x_0)\))값을 의미한다. 따라서 확률밀도함수 즉, 분포의 형태를 어떻게 정의하는지에 따라 얼마든지 1 이상의 값이 나올 수 있다. 예를 들어 정규분포의 확률밀도함수 식에 특정 값을 대입했을 때 나오는 값(y축 값)을 생각해보면 얼마든지 1 이상의 값이 나올 수 있다.</description>
+    </item>
+    
+    <item>
+      <title>MCMC</title>
+      <link>/2021/01/06/mcmc/</link>
+      <pubDate>Wed, 06 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/01/06/mcmc/</guid>
+      <description>Markov Chain Monte Carlo(MCMC)켤레 사전 분포처럼 분포함수 간에 관계가 있거나 함수가 간단한 형태의 경우 적분을 쉽게 할 수 있다. 하지만 복잡한 함수 형태이거나 high dimension인 경우 Monte carlo integration이나 numerical method를 이용한 적분 방법을 적용하기 힘들다. 이 때 사용하는 방법이 Markov chain Monte Carlo 방법이다.
+Monte Carlo integration의 경우 independence sample을 뽑는데 high dimension인 경우 independence sample을 뽑는 것이 어렵다. 따라서 dependence sample을 뽑아서 이 문제를 해결해보자는 것이 Markov Chain Monte Carlo(MCMC)의 아이디어이다.</description>
+    </item>
+    
+    <item>
+      <title>Nonparametric Regression </title>
+      <link>/2021/01/05/nonparametric-regression/</link>
+      <pubDate>Tue, 05 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/01/05/nonparametric-regression/</guid>
+      <description>Non-parametric regression비모수 회귀분석은 함수의 형태를 가정하지 않는 회귀모형을 의미한다. 모수적 회귀모형에서는 보통 \(Y = \beta_0 + \beta_1X_1 + ... + \beta_pX_p + \epsilon\) 형태의 선형성을 가정했다(모수적 회귀모형에는 선형성을 가정하지 않는 비선형 회귀모형도 포함된다).
+반면에 비모수 회귀모형에서는 고정된 함수의 형태를 가정하지 않고 단순히 smooth function을 가정한다.
+표본 (X_1,Y_1), …(X_n,Y_n)이 주어졌을 때 우리가 추정하고자 하는 회귀 함수는 다음과 같이 정의된다.
+\[Y = m(X) + \epsilon, \quad m(x) = E(Y|X = x), \quad E(\epsilon) = 0\]</description>
     </item>
     
     <item>
@@ -23,16 +98,7 @@
       <pubDate>Thu, 05 May 2016 21:48:51 -0700</pubDate>
       
       <guid>/about/</guid>
-      <description>This is a &amp;ldquo;hello world&amp;rdquo; example website for the blogdown package. The theme was forked from @jrutheiser/hugo-lithium-theme and modified by Yihui Xie.</description>
-    </item>
-    
-    <item>
-      <title>Lorem Ipsum</title>
-      <link>/2015/01/01/lorem-ipsum/</link>
-      <pubDate>Thu, 01 Jan 2015 13:09:13 -0600</pubDate>
-      
-      <guid>/2015/01/01/lorem-ipsum/</guid>
-      <description>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</description>
+      <description>공부한 내용을 정리하기 위한 블로그입니다.</description>
     </item>
     
   </channel>

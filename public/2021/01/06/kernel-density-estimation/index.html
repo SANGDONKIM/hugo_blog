@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.80.0" />
+
+
+<title>kernel density estimation - 문과생의 통계학 일기</title>
+<meta property="og:title" content="kernel density estimation - 문과생의 통계학 일기">
+
+
+  <link href='/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo1.png"
+         width="50"
+         height="50"
+         alt="Logo1">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/SANGDONKIM/hugo_blog">GitHub</a></li>
+    
+    <li><a href="https://twitter.com/rstudio">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">6 min read</span>
+    
+
+    <h1 class="article-title">kernel density estimation</h1>
+
+    
+    <span class="article-date">2021-01-06</span>
+    
+
+    <div class="article-content">
+      
+
+
+<div id="probability-density-function" class="section level1">
+<h1>probability density function</h1>
+<p>확률밀도함수(pdf)는 확률변수의 분포를 나타내는 함수로 보통 확률변수가 연속형일 때를 지칭한다.
+확률 밀도 함수는 두 가지 조건을 만족해야 한다.
+<br>
+- 모든 실수값 x에 대해 <span class="math inline">\(f(x)\ge 0\)</span>
+- <span class="math inline">\(\int_{-\infty}^{\infty} f(x) dx\)</span>=1
+<br>
+pdf 조건에서 알 수 있듯이 확률밀도함수는 확률이 아니며, 확률밀도함수를 적분해야만 확률이 나온다.</p>
+<p><br><br></p>
+</div>
+<div id="probability-density" class="section level1">
+<h1>probability density</h1>
+<p>확률 밀도는 <span class="math inline">\(X=x_0\)</span>일 때 확률밀도함수(<span class="math inline">\(f(x_0)\)</span>)값을 의미한다. 따라서 확률밀도함수 즉, 분포의 형태를 어떻게 정의하는지에 따라 얼마든지 1 이상의 값이 나올 수 있다. 예를 들어 정규분포의 확률밀도함수 식에 특정 값을 대입했을 때 나오는 값(y축 값)을 생각해보면 얼마든지 1 이상의 값이 나올 수 있다.</p>
+<p>연속형 확률 변수 <span class="math inline">\(X\)</span>를 정의했을 때 <span class="math inline">\(P(X=x_0)\)</span>은 연속 구간에서는 취할 수 있는 무수히 많은 경우의 수가 있으므로 <span class="math inline">\(P(X=x_0)=0\)</span>이다. <span class="math inline">\(P(a\le X \le b)\)</span>은 확률변수 <span class="math inline">\(X\)</span>의 범위가 a와 b 사이에서 정의되면 <span class="math inline">\(P(a\le X \le b)\)</span> = 1을 만족해야 한다.두 가지 정의에 불일치하는 부분이 있다.
+<span class="math inline">\(P(X=x_0)=0\)</span>으로 정의하면 <span class="math inline">\(X\)</span>의 범위 a와 b 사이에서 <span class="math inline">\(P(X=x_0)\)</span>무수히 많이 더해도 1을 만족하지 않는다.
+<span class="math inline">\(P(X=x_0)=\epsilon\)</span>, 즉 0에 아주 근접한 매우 작은 값으로 정의하면 연속 구간에서는 취할 수 있는 무수히 많은 경우의 수가 있으므로 <span class="math inline">\(P(a\le X \le b)=\infty\)</span>가 된다.</p>
+<p>따라서 <span class="math inline">\(P(X=x_0)\)</span>은 위의 정의를 그대로 생각해보면 0은 아니지만 0보다 작은 값도 아닌 값?이 된다.</p>
+<p>다시 처음 확률밀도함수의 정의에서 출발하면 확률 변수 <span class="math inline">\(X\)</span>의 범위가 0부터 1까지라고 했을 때 <span class="math inline">\(P(0\le X \le 1)\)</span> = 1이다.
+구간을 절반으로 나누면 <span class="math inline">\(P(0\le X \le \frac{1}{2})=\frac{1}{2}\)</span>이다.
+구간을 다시 절반으로 나누면 <span class="math inline">\(P(0\le X \le \frac{1}{4})=\frac{1}{4}\)</span>이다.
+이러한 과정을 계속 반복해서 구간을 잘게 쪼개면 <span class="math inline">\(P(0\le X \le d)=d\)</span>가 성립하며, <span class="math inline">\(P(x_0\le X \le x_0+d)=d\)</span>이다.<br />
+즉, <span class="math inline">\(P(X=x_0)=\lim_{d\to+0} P(x_0 \le X \le x_0+d)\)</span>이며, 식에 따라 <span class="math inline">\(P(X=x_0)=0\)</span>이 된다. 이 정의도 문제가 있는데 정의 그대로 <span class="math inline">\(P(X=x_0)=0\)</span>이면 a의 값에 상관없이 <span class="math inline">\(P(0 \le X \le a)=0\)</span>이 된다.
+이 문제를 해결하기 위해서 <span class="math inline">\(P(x_0\le X \le x_0+d)=d\)</span>d에서 양변에 d를 나눠서 확률밀도를 재정의하면 다음과 같다.
+<br>
+<span class="math inline">\(f(x_0) = P(X=x_0)=\lim_{d\to+0} \frac{P(x_0 \le X \le x_0+d)}{d}\)</span>
+<span class="math inline">\(\lim_{d\to+0} \frac{P(x_0 \le X \le x_0+d)}{d}=lim_{d\to+0}\frac{d}{d}=lim_{d\to+0} 1 = 1\)</span>을 만족한다.</p>
+<p><br><br></p>
+</div>
+<div id="density-estimation-의미" class="section level1">
+<h1>density estimation 의미</h1>
+<p>통계학에서 density estimation은 보통 분포(확률밀도함수)의 형태를 가정하고 데이터를 이용해서 모수를 추정하는 방식이다. (parametric density estimation이라고도 한다)</p>
+<p>반면에 kernel density estimation에서는 분포의 형태를 가정하지 않고 관찰된 데이터만을 이용해서 분포를 추정한다. (non-parametric density estimation이라고도 한다)</p>
+<p><br><br></p>
+</div>
+<div id="kernel-density-정의" class="section level1">
+<h1>kernel density 정의</h1>
+<p>$ = _{i=1}^nw() $</p>
+<p><span class="math inline">\(h\)</span> : bin width or smoothing parameter or window width</p>
+<p>간격을 좁게 하면 undersmooth되고, 반면에 간격을 넓게 하면 oversmooth된다.</p>
+<p><span class="math inline">\(w\)</span> : weight function (=<span class="math inline">\(K(\cdot)\)</span> : kernel function)
+<span class="math inline">\(w(t)\)</span>는 probability density의 성질을 만족해야 하며, density의 형태를 원점에서 대칭으로 정의한다.</p>
+</div>
+<div id="kernel-function-종류" class="section level1">
+<h1>kernel function 종류</h1>
+<p>kernel의 형태는 정의하기에 따라 여러 종류가 있다. kernel 함수의 형태에 따라 추정되는 밀도의 형태가 조금씩 바뀐다. 다만 전반적인 추정된 밀도의 형태는 거의 유사하다(MISE를 기준으로 kernel별 점근적 상대 효율성을 비교해보면 Epanechnikov kernel이 1로 가장 좋지만 다른 kernel function과 큰 차이를 보이지 않는다). kernel function을 정하는 것 보다는 bin width를 정하는 것이 더 중요하다.</p>
+<p><img src="/2021-01-06-kernel-density-estimation/index_files/500px-Kernels.svg.png" /></p>
+<p>rectangular kernel일 경우 histogram density estimation과 같다.
+<br><br></p>
+</div>
+<div id="커널이-gaussian-일-때-예시" class="section level1">
+<h1>커널이 gaussian 일 때 예시</h1>
+<pre class="r"><code>x &lt;- c(65, 75, 67, 79, 81, 91) # observed data 
+y &lt;- 50:99  
+h &lt;- 5.5
+n &lt;- length(y)
+
+B &lt;- numeric(n)
+K &lt;- numeric(n)</code></pre>
+<p><br><br></p>
+</div>
+<div id="xi-65일-때" class="section level1">
+<h1>xi = 65일 때</h1>
+<pre class="r"><code>for (j in 1:n) {
+        A &lt;- 1/(h*sqrt(2*pi))
+        B[j] &lt;- (-0.5)*((y[j] - 65)/h)^2
+        K[j] &lt;- A*exp(B[j])
+}
+
+plot(y, K, type = &#39;l&#39;, main = &#39;kernel at xi = 65&#39;)</code></pre>
+<p><img src="index_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p><br><br></p>
+</div>
+<div id="각-xi-별-kernel-plot" class="section level1">
+<h1>각 xi 별 kernel plot</h1>
+<pre class="r"><code>m &lt;- length(x)
+
+B &lt;- matrix(0, nrow = n, ncol = m)
+K &lt;- matrix(0, nrow = n, ncol = m)
+
+for (i in 1:m) {
+        for (j in 1:n) {
+                A &lt;- 1/(h*sqrt(2*pi)*m)
+                B[j, i] &lt;- (-0.5)*((y[j] - x[i])/h)^2
+                K[j, i] &lt;- A*exp(B[j, i])
+        }
+}
+
+
+
+plot(y, K[,1], type = &#39;l&#39;, main = &#39;&#39;, xlim = c(45, 110), ylim = c(0, 0.04))
+for (i in 2:6) {
+        lines(y, K[,i], type = &#39;l&#39;, main = &#39;&#39;)
+}
+
+
+# 최종 kernel
+K &lt;- round(K, digit = 7)
+d &lt;- rowSums(K)
+
+lines(y, d, type = &#39;l&#39;, main = &#39;Kernel density&#39;)</code></pre>
+<p><img src="index_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<p><br><br></p>
+</div>
+<div id="h-값에-따른-kernel의-형태-변화-gaussian-kernel-일-때" class="section level1">
+<h1>h 값에 따른 kernel의 형태 변화 (gaussian kernel 일 때)</h1>
+<p>h 값을 작게 하면 undersmooth되고, 반면에 h값을 크게 하면 oversmooth된다. 따라서 적절한 h를 찾는 것이 중요하다.
+h 값은 MLCV(Maximum likelihood cross validation)에 의해 추정할 수 있다.
+<br>
+<span class="math inline">\(MLCV_{max} = \frac{1}{n}\sum_{i=1}^nlog[\sum_{j}w(\frac{x_j-X_i}{h})]-log[(n-1)h]\)</span>
+<br></p>
+<pre class="r"><code>x &lt;- c(-0.77, -0.6, -0.25, 0.14, 0.45, 0.64, 0.65, 1.19, 1.71, 1.74)
+y &lt;- seq(-4, 4, 0.1)
+n &lt;- NROW(x)
+m &lt;- NROW(y)
+
+B &lt;- matrix(0, nrow = m, ncol = n)
+K &lt;- matrix(0, nrow = m, ncol = n)
+
+h &lt;- 0.25
+
+
+for (i in 1:n) {
+        for (j in 1:m) {
+                A &lt;- 1/(h*sqrt(2*pi)*n)
+                B[j, i] &lt;- (-1/2)*((y[j] - x[i])/h)^2
+                K[j, i] &lt;- A*exp(B[j, i])
+        }
+}
+
+plot(y, K[,1], type = &#39;l&#39;, main = &#39;h = 0.25&#39;, ylim = c(0, 0.55), ylab = &#39;&#39;, xlab = &#39;&#39;)
+for (i in 2:10) {
+        lines(y, K[,i], type = &#39;l&#39;, main = &#39;&#39;)
+}
+
+
+K &lt;- round(K, digit = 7)
+d &lt;- rowSums(K)
+lines(y, d, type = &#39;l&#39;, main = &#39;&#39;)</code></pre>
+<p><img src="index_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<pre class="r"><code>x &lt;- c(-0.77, -0.6, -0.25, 0.14, 0.45, 0.64, 0.65, 1.19, 1.71, 1.74)
+y &lt;- seq(-4, 4, 0.1)
+n &lt;- NROW(x)
+m &lt;- NROW(y)
+
+B &lt;- matrix(0, nrow = m, ncol = n)
+K &lt;- matrix(0, nrow = m, ncol = n)
+
+h &lt;- 1
+
+
+for (i in 1:n) {
+        for (j in 1:m) {
+                A &lt;- 1/(h*sqrt(2*pi)*n)
+                B[j, i] &lt;- (-1/2)*((y[j] - x[i])/h)^2
+                K[j, i] &lt;- A*exp(B[j, i])
+        }
+}
+
+plot(y, K[,1], type = &#39;l&#39;, main = &#39;h = 1&#39;, ylim = c(0, 0.55), ylab = &#39;&#39;, xlab = &#39;&#39;)
+for (i in 2:10) {
+        lines(y, K[,i], type = &#39;l&#39;, main = &#39;&#39;)
+}
+
+
+K &lt;- round(K, digit = 7)
+d &lt;- rowSums(K)
+lines(y, d, type = &#39;l&#39;, main = &#39;&#39;)</code></pre>
+<p><img src="index_files/figure-html/unnamed-chunk-4-2.png" width="672" /></p>
+<p><br><br></p>
+</div>
+<div id="boundary-kernel" class="section level1">
+<h1>Boundary kernel</h1>
+<p>원점에서 불연속점이 존재하거나 x의 범위가 원점에서 시작하거나 끝나는 경우(boundary of the support set of a density) 즉, boundary 주변에서 KDE는 large error를 갖는다. 이에 대한 해결책으로 reflection boundary technique을 고려해볼 수 있다.</p>
+<pre class="r"><code>set.seed(1)
+x &lt;- rexp(1000, 1)
+plot(density(x), xlim = c(-1, 6), ylim = c(0, 1), main = &#39;&#39;)
+abline(v = 0)
+
+y &lt;- seq(0.001, 6, 0.01)
+lines(y, dexp(y, 1), lty = 2)</code></pre>
+<p><img src="index_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p><br><br></p>
+</div>
+<div id="reflection-boundary-technique" class="section level1">
+<h1>Reflection boundary technique</h1>
+<p>전체 데이터 <span class="math inline">\(x_1, ..., x_n\)</span>에 대해서 원점에서 대칭인 <span class="math inline">\(-x_1, ..., -x_n\)</span>을 만든다. <span class="math inline">\(2n\)</span>개의 데이터를 이용해서 <span class="math inline">\(g\)</span>를 추정한다.
+<span class="math inline">\(\hat{f(x)}=2\hat{g(x)}\)</span>
+<br>
+즉, 대칭인 2개의 데이터셋에 대해서 각각 KDE를 구한다. 두 개의 KDE를 합한 KDE를 구하고 원 데이터 범위의 KDE만 남긴다.</p>
+<p><br><br></p>
+<pre class="r"><code>set.seed(1)
+x &lt;- rexp(1000, 1)
+z=-x
+plot(density(x), xlim = c(-6, 6), ylim = c(0, 1), main = &#39;&#39;, col = &#39;red&#39;)
+abline(v = 0)
+
+y &lt;- seq(0.001, 6, 0.01)
+lines(density(z), xlim = c(-6, 6), ylim = c(0, 1), main = &#39;&#39;, col = &#39;blue&#39;)
+
+xx &lt;- c(x, -x)
+g &lt;- density(xx, bw = bw.nrd0(x))
+a &lt;- seq(-6, 6, 0.01)
+ghat &lt;- approx(g$x, g$y, xout = a) # 지정된 수의 근사 함수 값을 반환 
+fhat &lt;- 2*ghat$y
+
+bw &lt;- paste(&#39;Bandwidth = &#39;, round(g$bw, 5))
+lines(a, fhat, type = &#39;l&#39;, xlim = c(-6, 6), ylim = c(0, 1), main = &#39;&#39;, xlab = bw, ylab = &#39;density&#39;)
+abline(v=0)
+
+y &lt;- seq(0.001, 6, 0.01)
+lines(y, dexp(y, 1), lty = 2)</code></pre>
+<p><img src="index_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+</div>
+<div id="httpsmedium.comanalytics-vidhyakernel-density-estimation-kernel-construction-and-bandwidth-optimization-using-maximum-b1dfce127073" class="section level1">
+<h1><a href="https://medium.com/analytics-vidhya/kernel-density-estimation-kernel-construction-and-bandwidth-optimization-using-maximum-b1dfce127073" class="uri">https://medium.com/analytics-vidhya/kernel-density-estimation-kernel-construction-and-bandwidth-optimization-using-maximum-b1dfce127073</a></h1>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//https-statistics-dondon-7781aa-netlify-app.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-187469260-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

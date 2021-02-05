@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>optimization on 문과생의 통계학 일기</title>
+    <link>/tags/optimization/</link>
+    <description>Recent content in optimization on 문과생의 통계학 일기</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 27 Jan 2021 00:00:00 +0000</lastBuildDate><atom:link href="/tags/optimization/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>ADMM</title>
+      <link>/2021/01/27/admm/</link>
+      <pubDate>Wed, 27 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/01/27/admm/</guid>
+      <description>scaled dual ADMM algorithmGiven x, z and , to some initial value.
+Repeat:
+\(x:= \arg\max_{x}(f(x) + \frac{\rho}{2}\|Ax+Bz-c+\mu\|_2^2)\)\(x:= \arg\max_{x}(g(z) + \frac{\rho}{2}\|Ax+Bz-c+\mu\|_2^2)\)\(\mu:= \mu + (Ax + Bz - c)\)Stopping criterion : quit \(\|r\|_2&amp;lt;\epsilon\) and \(\|s\|_2&amp;lt;\epsilon\) Stopping criterionWe can define the primal and dual residuals in ADMM at step k+1.
+* Primal residuals : \(r^{k+1} = Ax^{k+1} + Bz^{k+1} - c\)</description>
+    </item>
+    
+  </channel>
+</rss>

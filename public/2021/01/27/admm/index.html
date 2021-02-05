@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.80.0" />
+
+
+<title>ADMM - 문과생의 통계학 일기</title>
+<meta property="og:title" content="ADMM - 문과생의 통계학 일기">
+
+
+  <link href='/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo1.png"
+         width="50"
+         height="50"
+         alt="Logo1">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/SANGDONKIM/hugo_blog">GitHub</a></li>
+    
+    <li><a href="https://twitter.com/rstudio">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">4 min read</span>
+    
+
+    <h1 class="article-title">ADMM</h1>
+
+    
+    <span class="article-date">2021-01-27</span>
+    
+
+    <div class="article-content">
+      
+<script src="/2021/01/27/admm/index_files/header-attrs/header-attrs.js"></script>
+
+
+<div id="scaled-dual-admm-algorithm" class="section level3">
+<h3>scaled dual ADMM algorithm</h3>
+<ul>
+<li><p>Given x, z and , to some initial value.</p></li>
+<li><p>Repeat:</p>
+<ul>
+<li><span class="math inline">\(x:= \arg\max_{x}(f(x) + \frac{\rho}{2}\|Ax+Bz-c+\mu\|_2^2)\)</span></li>
+<li><span class="math inline">\(x:= \arg\max_{x}(g(z) + \frac{\rho}{2}\|Ax+Bz-c+\mu\|_2^2)\)</span></li>
+<li><span class="math inline">\(\mu:= \mu + (Ax + Bz - c)\)</span></li>
+<li>Stopping criterion : quit <span class="math inline">\(\|r\|_2&lt;\epsilon\)</span> and <span class="math inline">\(\|s\|_2&lt;\epsilon\)</span> <br><br><br></li>
+</ul></li>
+</ul>
+<div id="stopping-criterion" class="section level4">
+<h4>Stopping criterion</h4>
+<p>We can define the primal and dual residuals in ADMM at step k+1.<br />
+* Primal residuals : <span class="math inline">\(r^{k+1} = Ax^{k+1} + Bz^{k+1} - c\)</span><br />
+* Dual residuals : <span class="math inline">\(s^{k+1} = \rho A^TB(z^{k+1} - z^k)\)</span><br />
+</p>
+<p>Therefore stopping criterion satisfies that <span class="math inline">\(\|r\|_2\)</span> and <span class="math inline">\(\|s\|_2\)</span> are smaller than any <span class="math inline">\(\epsilon\)</span></p>
+<p><br><br></p>
+</div>
+</div>
+<div id="lasso-example" class="section level3">
+<h3>Lasso example</h3>
+<p><span class="math display">\[
+\begin{equation*}
+\begin{aligned}
+&amp; \underset{\beta}{\text{minimize}}
+&amp; &amp; \sum_{i=1}^n (y_i - \beta_0 - x_i^t\beta)^2 + \lambda \sum_{j = 1}^p |\beta_j| \\
+\end{aligned}
+\end{equation*}
+\]</span></p>
+<p><span class="math inline">\(\Leftrightarrow\)</span></p>
+<p><span class="math display">\[
+\begin{equation*}
+\begin{aligned}
+&amp; \underset{\beta}{\text{minimize}}
+&amp; &amp; f(\beta) + f(z) \\
+&amp; \text{subject to}
+&amp; &amp; I\beta - IZ = 0
+\end{aligned}
+\end{equation*}
+\]</span></p>
+<p><br />
+</p>
+<p><span class="math display">\[
+\begin{align}
+r = I\beta - IZ \newline
+L_\rho(\beta, z, v) &amp;= f(\beta) + g(z) + v^tr + \frac{\rho}{2}||r||_2^2 \newline
+                    &amp;= f(\beta) + g(z) + \frac{\rho}{2}||r+\frac{1}{\rho}v||_2^2 - \frac{\rho}{2}||v||_2^2 \newline
+                    &amp;= f(\beta) + g(z) + \frac{\rho}{2}||r+\mu||_2^2 - constant_v, \quad \mu = \frac{1}{\rho}v 
+\end{align}
+\]</span><br />
+</p>
+<p><span class="math display">\[
+\begin{align}
+\beta^{k+1} &amp;:= \operatorname*{argmin}_\beta (f(\beta) + \frac{\rho}{2}||I\beta - IZ^k + \mu^k||_2^2) \newline
+            &amp;= \operatorname*{argmin}_\beta (y-X\beta)^t(y-X\beta) + \frac{\rho}{2}||I\beta - IZ^k + \mu^k||_2^2) \newline
+            &amp;\Rightarrow -2X^ty + 2X^tX\beta + \rho\beta - \rho Z^k +\rho\mu^k = 0 \newline
+            &amp;\Leftrightarrow (2X^tX + \rho I)\beta = 2X^ty + \rho(Z^k - \mu^k) \newline
+            &amp;\therefore \beta^{k+1} = (2X^tX + \rho I)^{-1}(2X^ty + \rho(Z^k - \mu^k))
+\end{align}
+\]</span></p>
+<p><br />
+</p>
+<p><span class="math display">\[
+\begin{align}
+\beta^{k+1} &amp;:= \operatorname*{argmin}_\beta (f(\beta) + \frac{\rho}{2}||I\beta - IZ^k + \mu^k||_2^2) \newline
+            &amp;= \operatorname*{argmin}_\beta (y-X\beta)^t(y-X\beta) + \frac{\rho}{2}||I\beta - IZ^k + \mu^k||_2^2) \newline
+            &amp;\Rightarrow -2X^ty + 2X^tX\beta + \rho\beta - \rho Z^k +\rho\mu^k = 0 \newline
+            &amp;\Leftrightarrow (2X^tX + \rho I)\beta = 2X^ty + \rho(Z^k - \mu^k) \newline
+            &amp;\therefore \beta^{k+1} = (2X^tX + \rho I)^{-1}(2X^ty + \rho(Z^k - \mu^k))
+\end{align}
+\]</span></p>
+<p><br />
+</p>
+<p>The prox operatior for <span class="math inline">\(g(z) = \lambda||z||_1\)</span></p>
+<p><span class="math display">\[
+\begin{align}
+prox_{\lambda, g}(z) &amp;= \operatorname*{argmin}_v (\lambda||z||_1 + \frac{1}{2}||z-v||_2^2) \newline
+                     &amp;= \operatorname*{argmin}_v (||v||_1 + \frac{1}{2\cdot \lambda}||z-v||_2^2) \newline
+                     &amp;\therefore \operatorname*{argmin}_{v_i} (\frac{1}{2}(v_i - z_i)^2 + \lambda|v_i|) 
+\end{align}
+\]</span></p>
+<p><br />
+</p>
+<p><span class="math display">\[
+\begin{align}
+Z^{k+1} &amp;:= \operatorname*{argmin}_Z (g(Z) + \frac{\rho}{2}||I\beta^{k+1} - IZ + \mu^k||_2^2) \newline
+            &amp;= \operatorname*{argmin}_Z (g(Z) + \frac{\rho}{2}||\beta^{k+1} + \mu^k - Z) ||_2^2 \newline
+            &amp;= \operatorname*{argmin}_Z (g(Z) + \frac{1}{2\cdot \frac{1}{\rho}}||\beta^{k+1} + \mu^k - Z) ||_2^2 \newline
+            &amp;\therefore prox_{\frac{1}{\rho}, g}(\beta^{k+1} + \mu^k)
+\end{align}
+\]</span></p>
+<p><br />
+</p>
+<ul>
+<li><p>Given <span class="math inline">\(\beta\)</span>, <span class="math inline">\(z\)</span>, <span class="math inline">\(\mu\)</span>, <span class="math inline">\(\rho\)</span> to some initial value</p></li>
+<li><p>Repeat:</p>
+<ul>
+<li><span class="math inline">\(\therefore \beta^{k+1} = (2X^tX + \rho I)^{-1}(2X^ty + \rho(Z^k - \mu^k))\)</span></li>
+<li><span class="math inline">\(\therefore Z^{k+1} = prox_{\frac{1}{\rho}, g}(\beta^{k+1} + \mu^k)\)</span></li>
+<li><span class="math inline">\(\mu^{k+1}:= \mu^k + (\beta^{k+1} - Z^{k+1})\)</span></li>
+<li>Stopping criterion : quit <span class="math inline">\(\|r\|_2&lt;\epsilon\)</span> and <span class="math inline">\(\|s\|_2&lt;\epsilon\)</span></li>
+</ul></li>
+</ul>
+<p><br></p>
+<ul>
+<li>prime resdual : <span class="math inline">\(r^{k+1} = \beta^{k+1} - z^{k+1}\)</span></li>
+<li>dual resdual : $s^{k+1} = -(z^{k+1} - z^k) $</li>
+</ul>
+<p><br />
+</p>
+</div>
+<div id="r-코드" class="section level3">
+<h3>R 코드</h3>
+<pre class="r"><code>nll &lt;- function(X, Y, beta) {
+                A &lt;- Y - X %*% beta
+                loglike &lt;- crossprod(A)
+                return(loglike)
+}
+
+# Proximal operator
+prox.l1 &lt;- function(u, lambda) {
+                uhat &lt;- abs(u) - lambda
+                prox &lt;- sign(u) * pmax(rep(0, length(u)), uhat)
+                return(prox)
+}
+
+l2norm &lt;- function(x) sqrt(sum(x^2))
+
+
+ADMM &lt;- function(X,Y,rho=5,lambda=.1,iter=100, eps = 0.0001){
+                
+                n &lt;- nrow(X)
+                p &lt;- ncol(X)
+                
+                beta &lt;- matrix(0, nrow=iter, ncol=p) 
+                beta[1,] &lt;- rep(0, p)
+                
+                obj &lt;- rep(0, iter)
+                obj[1] &lt;- nll(X, Y, beta[1,]) + lambda * sum(abs(beta[1,]))
+                
+                z &lt;- matrix(0, nrow=iter, ncol=p)
+                v &lt;- rep(0, p)     
+                
+                invmat &lt;- solve(2*crossprod(X) + diag(rho, p))
+                
+                s &lt;- 0    
+                r &lt;- 0    
+                t &lt;- 0
+                
+                for (t in 2:iter){
+                                
+                                beta[t,] &lt;- invmat %*% (2*crossprod(X, Y) + rho * (z[t-1,]-v))
+                                z[t,] &lt;- prox.l1(beta[t,] + v, lambda/rho)
+                                v &lt;- v + beta[t,] - z[t,]
+                                obj[t] &lt;- nll(X, Y, beta[t,]) + lambda * sum(abs(beta[t,]))
+                                
+                                r &lt;- beta[t,] - z[t,]
+                                s &lt;- -rho * (z[t,] - z[t-1,])
+                                
+                                r.norm &lt;- l2norm(r)
+                                s.norm &lt;- l2norm(s)
+                                
+                                if (r.norm &lt; eps &amp; s.norm &lt; eps) {
+                                                break
+                                }
+                }
+                beta &lt;- beta[-c(t+1:iter),]
+                obj &lt;- obj[-c(t+1:iter)]
+                result &lt;- list(&quot;beta.hat&quot; = beta[nrow(beta),], &quot;beta&quot;=beta, &quot;objective&quot;=obj, &quot;iter&quot;=t)
+                return(result)
+}
+
+x &lt;- cbind(1, matrix(rnorm(1000*4), ncol = 4))
+beta &lt;- c(1.4, -2, -3, 4, 5)
+
+eps &lt;- rnorm(1000*1)　
+y &lt;- x%*%beta + eps 
+
+ADMM(X = x, Y = y)</code></pre>
+<pre><code>## $beta.hat
+## [1]  1.347326 -2.008476 -3.007788  4.035505  5.087262
+## 
+## $beta
+##          [,1]      [,2]      [,3]     [,4]     [,5]
+## [1,] 0.000000  0.000000  0.000000 0.000000 0.000000
+## [2,] 1.343709 -2.003900 -3.000069 4.025119 5.073492
+## [3,] 1.347265 -2.008418 -3.007717 4.035426 5.087171
+## [4,] 1.347326 -2.008476 -3.007788 4.035505 5.087262
+## [5,] 1.347326 -2.008476 -3.007788 4.035505 5.087262
+## 
+## $objective
+## [1] 55248.384  1043.869  1043.499  1043.499  1043.499
+## 
+## $iter
+## [1] 5</code></pre>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//https-statistics-dondon-7781aa-netlify-app.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-187469260-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

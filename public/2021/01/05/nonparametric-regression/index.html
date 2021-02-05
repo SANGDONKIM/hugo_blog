@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.80.0" />
+
+
+<title>Nonparametric Regression  - 문과생의 통계학 일기</title>
+<meta property="og:title" content="Nonparametric Regression  - 문과생의 통계학 일기">
+
+
+  <link href='/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo1.png"
+         width="50"
+         height="50"
+         alt="Logo1">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/SANGDONKIM/hugo_blog">GitHub</a></li>
+    
+    <li><a href="https://twitter.com/rstudio">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">3 min read</span>
+    
+
+    <h1 class="article-title">Nonparametric Regression </h1>
+
+    
+    <span class="article-date">2021-01-05</span>
+    
+
+    <div class="article-content">
+      
+<script src="/2021/01/05/nonparametric-regression/index_files/header-attrs/header-attrs.js"></script>
+
+
+<div id="non-parametric-regression" class="section level1">
+<h1>Non-parametric regression</h1>
+<p>비모수 회귀분석은 함수의 형태를 가정하지 않는 회귀모형을 의미한다. 모수적 회귀모형에서는 보통 <span class="math inline">\(Y = \beta_0 + \beta_1X_1 + ... + \beta_pX_p + \epsilon\)</span> 형태의 선형성을 가정했다(모수적 회귀모형에는 선형성을 가정하지 않는 비선형 회귀모형도 포함된다).<br />
+</p>
+<p>반면에 비모수 회귀모형에서는 고정된 함수의 형태를 가정하지 않고 단순히 smooth function을 가정한다.<br />
+</p>
+<p>표본 (X_1,Y_1), …(X_n,Y_n)이 주어졌을 때 우리가 추정하고자 하는 회귀 함수는 다음과 같이 정의된다.</p>
+<p><span class="math display">\[
+Y = m(X) + \epsilon, \quad m(x) = E(Y|X = x), \quad E(\epsilon) = 0
+\]</span></p>
+<div id="regressogram" class="section level2">
+<h2>Regressogram</h2>
+<p>가장 단순한 비모수추정치는 regressogram이다.<br />
+</p>
+<p>논의의 편의를 위해 설명변수를 1개만 가정한다. 또한 X는 0과 1사이의 값을 갖는다고 가정한다.<br />
+</p>
+<p>먼저 <span class="math inline">\([0, 1]\)</span> 구간을 k개의 bin으로 쪼갠다. 쪼갠 각 구간에 포함되는 관측치의 갯수를 계산한다.</p>
+<p><span class="math display">\[B_1 = [0, h], \quad B_2= [h, 2h], ...  \]</span>
+<span class="math inline">\(n_j\)</span> : <span class="math inline">\(B_j\)</span>에 포함되는 관측치의 갯수
+<span class="math inline">\(n_j = \sum_{i}I(X_i \in B_j), \quad I(X_i \in B_j) = \begin{cases} 1, &amp; \mbox{if }\mbox{X가 B_j에 포함될 경우} \\ 0, &amp; \mbox{if }n\mbox{ X가 B_j에 포함되지 않을 경우} \end{cases}\)</span></p>
+<p><span class="math inline">\(B_j\)</span> 구간에서의 <span class="math inline">\(Y_i\)</span>들의 평균 <span class="math inline">\(\bar{Y}_j\)</span>는 다음과 같이 정의된다.<br />
+<span class="math display">\[\bar{Y}_j = \frac{1}{n_j} \sum_{X_i \in B_j} Y_i\]</span></p>
+<p>마지막으로 <span class="math inline">\(\hat{m}(x)\)</span>는 모든 <span class="math inline">\(B_j\)</span>구간에서의 <span class="math inline">\(\bar{Y}_j\)</span>의 합으로 정의된다.
+<span class="math display">\[\hat{m}(x) = \sum_{j = 1}^k \bar{Y_j}I(x \in B_j)\]</span>
+<br><br></p>
+<div id="example" class="section level3">
+<h3>example</h3>
+<p><span class="math inline">\(Y_i = sin(X_i) + \epsilon\)</span>라는 모형에서 생성한 50개의 자료이다. 이 경우 <span class="math inline">\(m(x) = sin(x)\)</span>이고 <span class="math inline">\(X_i \sim U(-2, 2)\)</span>, <span class="math inline">\(\epsilon_i \sim N(0, \frac{1}{9})\)</span>이다.</p>
+<pre class="r"><code>n = 50
+set.seed(1233)
+x = runif(n, -2, 2)
+y = sin(x)+rnorm(n, mean = 0, sd = 1/3)</code></pre>
+<p><br><br></p>
+<p>구간의 갯수 k를 어떻게 지정하는지에 따라 <span class="math inline">\(\hat{m}(x)\)</span>는 undersmooth될 수도 있고 oversmooth될 수도 있다. 따라서 적절한 k를 지정하는 것이 중요하다(뒤에 cross-validation 참고).</p>
+<p><br><br></p>
+<pre class="r"><code>running_mean = function(x,y,left,right,k){
+        n = length(x)
+        B = seq(left,right,length=k+1)
+        WhichBin = findInterval(x,B) # 어떤 값이 구간에 있을 때 어느 구간에 속할지 알려주는 함수 
+        N = tabulate(WhichBin) # 각 구간에 포함되어 있는 관측치의 갯수 
+        m.hat = rep(0,k)
+        for(j in 1:k){
+                if(N[j]&gt;0) m.hat[j] = mean(y[WhichBin == j])
+        }
+        return(list(bins=B,m.hat=m.hat))
+}</code></pre>
+<pre class="r"><code>fit_10 &lt;- running_mean(x, y, left = -2, right = 2, k = 10)
+fit_30 &lt;- running_mean(x, y, left = -2, right = 2, k = 30)
+data.frame(x,y) %&gt;% ggplot(aes( x = x, y = y)) +
+        geom_point() + 
+        geom_line(data = data.frame(x = x, y = sin(x)), aes(x = x, y = y)) +  
+        geom_line(data = data.frame(x = fit_10$bins, y = c(fit_10$m.hat, fit_10$m.hat[10])),
+                  aes(x =x, y = y),
+                  color = &#39;red&#39;)+
+         geom_line(data = data.frame(x = fit_30$bins, y = c(fit_30$m.hat, fit_30$m.hat[30])), 
+                  aes(x = x, y = y), 
+                  color = &#39;blue&#39;) + 
+        ylim(c(-2, 2))</code></pre>
+<p><img src="/2021/01/05/nonparametric-regression/index_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<pre class="r"><code>HoRM::regressogram(x = x, y = y, nbins = 10, show.bins = T, show.lines = T, show.means = F, main = &#39;regressogram&#39;)</code></pre>
+<pre><code>## Registered S3 method overwritten by &#39;quantmod&#39;:
+##   method            from
+##   as.zoo.data.frame zoo</code></pre>
+<p><img src="/2021/01/05/nonparametric-regression/index_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p><span class="math inline">\(k = 10\)</span>일 때 red line을 보면 적절하게 추정된 것으로 보인다. <span class="math inline">\(k = 30\)</span>일 때 blue line을 보면 oversmooth된 것처럼 보인다.</p>
+<p><br><br></p>
+</div>
+</div>
+<div id="kernel-estimator" class="section level2">
+<h2>kernel estimator</h2>
+<p>커널 추정법은 회귀함수 <span class="math inline">\(f\)</span>의 추정치 <span class="math inline">\(\hat{f}\)</span>가 <span class="math inline">\(\mathbf{y} = (Y_1, Y_2, ..., Y_n)^t\)</span>의 선형결합으로 표현된다는 전제 하에서 출발한다. 즉, <span class="math inline">\(\hat{f}(x) = \sum w_iY_i\)</span>으로 추정하고자 하는데 가중치 <span class="math inline">\(w_i\)</span>를 어떻게 정해주는지가 핵심이다.</p>
+<p>이어서 서술</p>
+</div>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//https-statistics-dondon-7781aa-netlify-app.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-187469260-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

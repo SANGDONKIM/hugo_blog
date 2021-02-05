@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>visualization on 문과생의 통계학 일기</title>
+    <link>/tags/visualization/</link>
+    <description>Recent content in visualization on 문과생의 통계학 일기</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 27 Jan 2021 00:00:00 +0000</lastBuildDate><atom:link href="/tags/visualization/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>tmap package in R </title>
+      <link>/2021/01/27/tmap-package-in-r/</link>
+      <pubDate>Wed, 27 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/01/27/tmap-package-in-r/</guid>
+      <description>library(data.table)library(sp)library(rgeos)library(rgdal)library(tidyverse)library(tmap)tmap 패키지 튜토리얼서울시 따릉이 데이터 불러오기tutorial을 위해서 서울시 따릉이 데이터를 활용한다.
+서울시 따릉이 데이터는 https://data.seoul.go.kr/dataList/OA-13252/F/1/datasetView.do 에서 다운로드가 가능하다.
+station &amp;lt;- fread(&amp;#39;C:\\Users\\uos\\Desktop\\MASTER\\Spatial Data Analysis\\공공자전거 대여소 정보.csv&amp;#39;)colnames(station) &amp;lt;- c(&amp;#39;대여소번호&amp;#39;, &amp;#39;대여소명&amp;#39;, &amp;#39;자치구&amp;#39;, &amp;#39;상세주소&amp;#39;, &amp;#39;lat&amp;#39;, &amp;#39;long&amp;#39;, &amp;#39;설치시기&amp;#39;, &amp;#39;LCD거치대수&amp;#39;, &amp;#39;QR거치대수&amp;#39;, &amp;#39;운영방식&amp;#39;)station %&amp;gt;% names()## [1] &amp;quot;대여소번호&amp;quot; &amp;quot;대여소명&amp;quot; &amp;quot;자치구&amp;quot; &amp;quot;상세주소&amp;quot; &amp;quot;lat&amp;quot; ## [6] &amp;quot;long&amp;quot; &amp;quot;설치시기&amp;quot; &amp;quot;LCD거치대수&amp;quot; &amp;quot;QR거치대수&amp;quot; &amp;quot;운영방식&amp;quot;station## 대여소번호 대여소명 자치구## 1: 1695 월계미륭아파트 정문 노원구## 2: 2301 현대고등학교 건너편 강남구## 3: 2302 교보타워 버스정류장(신논현역 3번출구 후면) 강남구## 4: 2303 논현역 7번출구 강남구## 5: 2304 신영 ROYAL PALACE 앞 강남구## --- ## 2079: 2547 포드서초서비스센터앞 서초구## 2080: 1573 현대성우아파트 옆 강북구## 2081: 1268 몽촌토성역 1번출구 옆 송파구## 2082: 1267 올림픽공원 남2문 앞 송파구## 2083: 583 청계천 생태교실 앞 성동구## 상세주소 lat long 설치시기## 1: 노원구 월계동 14 37.</description>
+    </item>
+    
+    <item>
+      <title>Split the map into a grid using sf</title>
+      <link>/2021/01/16/split-the-map-into-a-grid-using-sf/</link>
+      <pubDate>Sat, 16 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/01/16/split-the-map-into-a-grid-using-sf/</guid>
+      <description>1 지도를 격자로 나누고 대여소가 몇 번째 격자에 해당하는지 찾기1.1 따릉이 대여소 정보 데이터 불러오기1.2 좌표계 변환1.3 서울 경계구역 데이터 불러오기1.4 CRS 값 변경1.5 Grid 개수 지정1.6 각 grid에 대한 label 생성1.7 서울시 경계구역과 grid 시각화1.8 따릉이 대여소가 몇번째 grid에 해당하는지 찾기1 지도를 격자로 나누고 대여소가 몇 번째 격자에 해당하는지 찾기library(rgdal)library(sp)library(sf)library(tidyverse)library(data.</description>
+    </item>
+    
+    <item>
+      <title>따릉이 대여소와 한강까지의 최단거리 구하기 </title>
+      <link>/2021/01/16/map-visualization-using-sf-package/</link>
+      <pubDate>Sat, 16 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/01/16/map-visualization-using-sf-package/</guid>
+      <description>1 따릉이 대여소에서 한강까지의 최단거리 구하기1.1 따릉이 대여소 정보 데이터 불러오기1.2 한강 데이터 불러오기1.3 좌표계 변환1.4 따릉이 대여소와 한강 사이의 최단거리 구하기1.5 데이터 병합library(rgdal)library(sp)library(sf)library(tidyverse)library(data.table)1 따릉이 대여소에서 한강까지의 최단거리 구하기1.1 따릉이 대여소 정보 데이터 불러오기서울시 공공 자전거 대여소 정보는 https://data.seoul.go.kr/dataList/OA-13252/F/1/datasetView.do 에서 다운로드가 가능하다.
+station &amp;lt;- fread(&amp;#39;C:\\Users\\uos\\Desktop\\MASTER\\Spatial Data Analysis\\공공자전거 대여소 정보.csv&amp;#39;)colnames(station) &amp;lt;- c(&amp;#39;대여소번호&amp;#39;, &amp;#39;대여소명&amp;#39;, &amp;#39;자치구&amp;#39;, &amp;#39;상세주소&amp;#39;, &amp;#39;lat&amp;#39;, &amp;#39;long&amp;#39;, &amp;#39;설치시기&amp;#39;, &amp;#39;LCD거치대수&amp;#39;, &amp;#39;QR거치대수&amp;#39;, &amp;#39;운영방식&amp;#39;)station## 대여소번호 대여소명 자치구## 1: 1695 월계미륭아파트 정문 노원구## 2: 2301 현대고등학교 건너편 강남구## 3: 2302 교보타워 버스정류장(신논현역 3번출구 후면) 강남구## 4: 2303 논현역 7번출구 강남구## 5: 2304 신영 ROYAL PALACE 앞 강남구## --- ## 2079: 2547 포드서초서비스센터앞 서초구## 2080: 1573 현대성우아파트 옆 강북구## 2081: 1268 몽촌토성역 1번출구 옆 송파구## 2082: 1267 올림픽공원 남2문 앞 송파구## 2083: 583 청계천 생태교실 앞 성동구## 상세주소 lat long 설치시기## 1: 노원구 월계동 14 37.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.80.0" />
+
+
+<title>Split the map into a grid using sf - 문과생의 통계학 일기</title>
+<meta property="og:title" content="Split the map into a grid using sf - 문과생의 통계학 일기">
+
+
+  <link href='/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo1.png"
+         width="50"
+         height="50"
+         alt="Logo1">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/SANGDONKIM/hugo_blog">GitHub</a></li>
+    
+    <li><a href="https://twitter.com/rstudio">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">5 min read</span>
+    
+
+    <h1 class="article-title">Split the map into a grid using sf</h1>
+
+    
+    <span class="article-date">2021-01-16</span>
+    
+
+    <div class="article-content">
+      
+<script src="/2021/01/16/split-the-map-into-a-grid-using-sf/index_files/header-attrs/header-attrs.js"></script>
+
+<div id="TOC">
+<ul>
+<li><a href="#지도를-격자로-나누고-대여소가-몇-번째-격자에-해당하는지-찾기"><span class="toc-section-number">1</span> 지도를 격자로 나누고 대여소가 몇 번째 격자에 해당하는지 찾기</a>
+<ul>
+<li><a href="#따릉이-대여소-정보-데이터-불러오기"><span class="toc-section-number">1.1</span> 따릉이 대여소 정보 데이터 불러오기</a></li>
+<li><a href="#좌표계-변환"><span class="toc-section-number">1.2</span> 좌표계 변환</a></li>
+<li><a href="#서울-경계구역-데이터-불러오기"><span class="toc-section-number">1.3</span> 서울 경계구역 데이터 불러오기</a></li>
+<li><a href="#crs-값-변경"><span class="toc-section-number">1.4</span> CRS 값 변경</a></li>
+<li><a href="#grid-개수-지정"><span class="toc-section-number">1.5</span> Grid 개수 지정</a></li>
+<li><a href="#각-grid에-대한-label-생성"><span class="toc-section-number">1.6</span> 각 grid에 대한 label 생성</a></li>
+<li><a href="#서울시-경계구역과-grid-시각화"><span class="toc-section-number">1.7</span> 서울시 경계구역과 grid 시각화</a></li>
+<li><a href="#따릉이-대여소가-몇번째-grid에-해당하는지-찾기"><span class="toc-section-number">1.8</span> 따릉이 대여소가 몇번째 grid에 해당하는지 찾기</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="지도를-격자로-나누고-대여소가-몇-번째-격자에-해당하는지-찾기" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> 지도를 격자로 나누고 대여소가 몇 번째 격자에 해당하는지 찾기</h1>
+<pre class="r"><code>library(rgdal)
+library(sp)
+library(sf)
+library(tidyverse)
+library(data.table)
+library(plotly)
+theme_set(theme_bw())</code></pre>
+<div id="따릉이-대여소-정보-데이터-불러오기" class="section level2" number="1.1">
+<h2><span class="header-section-number">1.1</span> 따릉이 대여소 정보 데이터 불러오기</h2>
+<p>서울시 공공 자전거 대여소 정보는 <a href="https://data.seoul.go.kr/dataList/OA-13252/F/1/datasetView.do" class="uri">https://data.seoul.go.kr/dataList/OA-13252/F/1/datasetView.do</a> 에서 다운로드가 가능하다.</p>
+<pre class="r"><code>station &lt;- fread(&#39;C:\\Users\\uos\\Desktop\\MASTER\\Spatial Data Analysis\\공공자전거 대여소 정보.csv&#39;)
+colnames(station) &lt;- c(&#39;대여소번호&#39;, &#39;대여소명&#39;, &#39;자치구&#39;, &#39;상세주소&#39;, &#39;lat&#39;, &#39;long&#39;, &#39;설치시기&#39;, &#39;LCD거치대수&#39;, &#39;QR거치대수&#39;, &#39;운영방식&#39;)
+station</code></pre>
+<pre><code>##       대여소번호                                   대여소명 자치구
+##    1:       1695                        월계미륭아파트 정문 노원구
+##    2:       2301                        현대고등학교 건너편 강남구
+##    3:       2302 교보타워 버스정류장(신논현역 3번출구 후면) 강남구
+##    4:       2303                             논현역 7번출구 강남구
+##    5:       2304                       신영 ROYAL PALACE 앞 강남구
+##   ---                                                             
+## 2079:       2547                       포드서초서비스센터앞 서초구
+## 2080:       1573                          현대성우아파트 옆 강북구
+## 2081:       1268                      몽촌토성역 1번출구 옆 송파구
+## 2082:       1267                        올림픽공원 남2문 앞 송파구
+## 2083:        583                         청계천 생태교실 앞 성동구
+##                                  상세주소      lat     long   설치시기
+##    1:                    노원구 월계동 14 37.62342 127.0669 2020-06-17
+##    2:      서울특별시 강남구 압구정로 134 37.52407 127.0218 2017-06-13
+##    3: 서울특별시 강남구 봉은사로 지하 102 37.50558 127.0243 2017-06-13
+##    4:   서울특별시 강남구 학동로 지하 102 37.51152 127.0215 2017-06-13
+##    5:        서울특별시 강남구 언주로 626 37.51253 127.0358 2017-06-13
+##   ---                                                                 
+## 2079:                         잠원동 55-1 37.51905 127.0123 2020-05-28
+## 2080:                       미아동 670-33 37.61666 127.0221 2020-05-05
+## 2081:      서울특별시 송파구 방이동 88-21 37.51729 127.1142 2020-06-25
+## 2082:      서울특별시 송파구 올림픽로 424 37.51424 127.1231 2020-06-25
+## 2083:     서울특별시 성동구 마장로39길 51 37.56797 127.0469 2020-06-30
+##       LCD거치대수 QR거치대수 운영방식
+##    1:          NA         10       QR
+##    2:          10         NA      LCD
+##    3:          10         NA      LCD
+##    4:          15         NA      LCD
+##    5:          10         NA      LCD
+##   ---                                
+## 2079:          NA         10       QR
+## 2080:          NA         10       QR
+## 2081:          NA         15       QR
+## 2082:          NA         15       QR
+## 2083:          NA          5       QR</code></pre>
+<pre class="r"><code>station_lcd &lt;- station %&gt;% filter(운영방식 == &#39;LCD&#39;) %&gt;% select(대여소번호, 자치구, lat, long)
+station_QR &lt;- station %&gt;% filter(운영방식 == &#39;QR&#39;) %&gt;% select(대여소번호, 자치구, lat, long)</code></pre>
+</div>
+<div id="좌표계-변환" class="section level2" number="1.2">
+<h2><span class="header-section-number">1.2</span> 좌표계 변환</h2>
+<p>이전 포스팅 참고 <a href="https://statistics-dondon-7781aa.netlify.app/2021/01/16/map-visualization-using-sf-package/" class="uri">https://statistics-dondon-7781aa.netlify.app/2021/01/16/map-visualization-using-sf-package/</a></p>
+<pre class="r"><code>temp &lt;- station_lcd
+
+colnames(temp)[c(3,4)] = c(&quot;Y&quot;,&quot;X&quot;)
+convertCoordSystem &lt;- function(data = temp, from.crs = from.crs, to.crs = to.crs){
+  xy = data.frame(long = data$X, lat = data$Y)
+  xy = as.data.frame(apply(xy, 2, as.numeric))
+  
+  coordinates(xy) = ~long+lat
+  
+  from.crs = CRS(from.crs)
+  from.coordinates = SpatialPoints(xy, proj4string=from.crs)
+  
+  to.crs = CRS(to.crs)
+  changed = as.data.frame(SpatialPoints(spTransform(from.coordinates, to.crs)))
+  names(changed) = c(&quot;long&quot;, &quot;lat&quot;)
+  
+  return(changed)
+}
+
+from.crs = &quot;+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs&quot;
+to.crs = &quot;+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs&quot;
+coord = convertCoordSystem(data = temp, from.crs = from.crs, to.crs = to.crs)
+temp[,c(3,4)] = coord 
+colnames(temp)[c(3,4)] = c(&quot;X&quot;,&quot;Y&quot;)
+coordinates(temp) = ~X+Y
+temp = st_as_sf(temp , coord = c(&quot;X&quot;, &quot;Y&quot;) , crs = 5179)</code></pre>
+</div>
+<div id="서울-경계구역-데이터-불러오기" class="section level2" number="1.3">
+<h2><span class="header-section-number">1.3</span> 서울 경계구역 데이터 불러오기</h2>
+<p>대한민국 경계구역 데이터는 이전 블로그 포스팅을 참고하면 불러올 수 있다. <a href="https://statistics-dondon-7781aa.netlify.app/2021/01/15/map-visualization/" class="uri">https://statistics-dondon-7781aa.netlify.app/2021/01/15/map-visualization/</a><br />
+</p>
+<p>대한민국 경계 데이터에서 서울 데이터만 추출하였다. shp 파일에 한글이 섞여있는데 icov 함수를 이용해서 인코딩을 UTF-8로 변경하면 에러 없이 불러올 수 있다.</p>
+<pre class="r"><code>nc &lt;- st_read(&#39;C:/Users/uos/Desktop/Master/bike sharing/CTPRVN_202005/CTPRVN.shp&#39;) %&gt;% st_transform()</code></pre>
+<pre><code>## Reading layer `CTPRVN&#39; from data source `C:\Users\uos\Desktop\MASTER\bike sharing\CTPRVN_202005\CTPRVN.shp&#39; using driver `ESRI Shapefile&#39;
+## Simple feature collection with 17 features and 3 fields
+## geometry type:  MULTIPOLYGON
+## dimension:      XY
+## bbox:           xmin: 746110.3 ymin: 1458754 xmax: 1387950 ymax: 2068444
+## projected CRS:  PCS_ITRF2000_TM</code></pre>
+<pre class="r"><code>nc$CTP_KOR_NM &lt;- iconv(nc$CTP_KOR_NM, from = &quot;CP949&quot;, to = &quot;UTF-8&quot;, sub = NA, mark = TRUE, toRaw = FALSE)
+nc &lt;- nc %&gt;% filter(str_detect(CTP_ENG_NM, &#39;Seoul&#39;))</code></pre>
+</div>
+<div id="crs-값-변경" class="section level2" number="1.4">
+<h2><span class="header-section-number">1.4</span> CRS 값 변경</h2>
+<p>서로 다른 데이터를 시각화할 때 좌표계가 일치하지 않으면 지도에 시각화를 할 수 없다. 따라서 반드시 좌표계를 일치시켜야만 같은 지도에 올바른 위치에 점이 찍히게 된다. st_crs 함수를 이용해서 따릉이 대여소 데이터의 좌표계와 서울 경계구역 데이터의 좌표계를 일치시켜주었다.</p>
+<pre class="r"><code>st_crs(temp) = st_crs(nc)</code></pre>
+</div>
+<div id="grid-개수-지정" class="section level2" number="1.5">
+<h2><span class="header-section-number">1.5</span> Grid 개수 지정</h2>
+<p>지도를 몇 개의 grid로 나눌건지를 설정해야한다. 나는 서울을 <span class="math inline">\(20 \times 10 = 200\)</span> grid로 나누었다.</p>
+<pre class="r"><code>pts &lt;- temp %&gt;% st_sf
+
+grid_50 &lt;- st_make_grid(nc, n = c(20, 10)) %&gt;% 
+  st_sf(grid_id = 1:length(.))
+pts</code></pre>
+<pre><code>## Simple feature collection with 1531 features and 2 fields
+## geometry type:  POINT
+## dimension:      XY
+## bbox:           xmin: 938070.3 ymin: 1937734 xmax: 971761.8 ymax: 1965672
+## projected CRS:  PCS_ITRF2000_TM
+## First 10 features:
+##    대여소번호 자치구                 geometry
+## 1        2301 강남구 POINT (957744.4 1947304)
+## 2        2302 강남구 POINT (957953.8 1945252)
+## 3        2303 강남구 POINT (957709.7 1945912)
+## 4        2304 강남구 POINT (958979.2 1946017)
+## 5        2305 강남구 POINT (958866.3 1946918)
+## 6        2306 강남구 POINT (958358.2 1947640)
+## 7        2307 강남구 POINT (959228.7 1947801)
+## 8        2308 강남구 POINT (958967.5 1947878)
+## 9        2309 강남구   POINT (960180 1946719)
+## 10       2310 강남구 POINT (959368.8 1947245)</code></pre>
+</div>
+<div id="각-grid에-대한-label-생성" class="section level2" number="1.6">
+<h2><span class="header-section-number">1.6</span> 각 grid에 대한 label 생성</h2>
+<pre class="r"><code>grid_lab &lt;- st_centroid(grid_50) %&gt;% cbind(st_coordinates(.))</code></pre>
+<pre><code>## Warning in st_centroid.sf(grid_50): st_centroid assumes attributes are constant
+## over geometries of x</code></pre>
+<pre class="r"><code>grid_lab</code></pre>
+<pre><code>## Simple feature collection with 200 features and 3 fields
+## geometry type:  POINT
+## dimension:      XY
+## bbox:           xmin: 935961.1 ymin: 1938182 xmax: 971141.8 ymax: 1965471
+## projected CRS:  PCS_ITRF2000_TM
+## First 10 features:
+##    grid_id        X       Y                        .
+## 1        1 935961.1 1938182 POINT (935961.1 1938182)
+## 2        2 937812.7 1938182 POINT (937812.7 1938182)
+## 3        3 939664.3 1938182 POINT (939664.3 1938182)
+## 4        4 941515.9 1938182 POINT (941515.9 1938182)
+## 5        5 943367.5 1938182 POINT (943367.5 1938182)
+## 6        6 945219.1 1938182 POINT (945219.1 1938182)
+## 7        7 947070.8 1938182 POINT (947070.8 1938182)
+## 8        8 948922.4 1938182 POINT (948922.4 1938182)
+## 9        9 950774.0 1938182   POINT (950774 1938182)
+## 10      10 952625.6 1938182 POINT (952625.6 1938182)</code></pre>
+</div>
+<div id="서울시-경계구역과-grid-시각화" class="section level2" number="1.7">
+<h2><span class="header-section-number">1.7</span> 서울시 경계구역과 grid 시각화</h2>
+<pre class="r"><code>ggplot() +
+  geom_sf(data = nc, fill = &#39;white&#39;, lwd = 0.05) +
+  geom_sf(data = pts, color = &#39;red&#39;, size = 1.7) + 
+  geom_sf(data = grid_50, fill = &#39;transparent&#39;, lwd = 0.3) +
+  geom_text(data = grid_lab, aes(x = X, y = Y, label = grid_id), size = 2) +
+  coord_sf(datum = NA)  +
+  labs(x = &quot;&quot;) +
+  labs(y = &quot;&quot;)</code></pre>
+<p><img src="/2021/01/16/split-the-map-into-a-grid-using-sf/index_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+</div>
+<div id="따릉이-대여소가-몇번째-grid에-해당하는지-찾기" class="section level2" number="1.8">
+<h2><span class="header-section-number">1.8</span> 따릉이 대여소가 몇번째 grid에 해당하는지 찾기</h2>
+<pre class="r"><code>pts %&gt;% st_join(grid_50, join = st_intersects) %&gt;% as.data.frame %&gt;% head()</code></pre>
+<pre><code>##   대여소번호 자치구 grid_id                 geometry
+## 1       2301 강남구      73 POINT (957744.4 1947304)
+## 2       2302 강남구      53 POINT (957953.8 1945252)
+## 3       2303 강남구      73 POINT (957709.7 1945912)
+## 4       2304 강남구      73 POINT (958979.2 1946017)
+## 5       2305 강남구      73 POINT (958866.3 1946918)
+## 6       2306 강남구      73 POINT (958358.2 1947640)</code></pre>
+</div>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//https-statistics-dondon-7781aa-netlify-app.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-187469260-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  </body>
+</html>
+

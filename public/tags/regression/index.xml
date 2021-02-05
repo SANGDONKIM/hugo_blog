@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>regression on 문과생의 통계학 일기</title>
+    <link>/tags/regression/</link>
+    <description>Recent content in regression on 문과생의 통계학 일기</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 05 Jan 2021 00:00:00 +0000</lastBuildDate><atom:link href="/tags/regression/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Nonparametric Regression </title>
+      <link>/2021/01/05/nonparametric-regression/</link>
+      <pubDate>Tue, 05 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/01/05/nonparametric-regression/</guid>
+      <description>Non-parametric regression비모수 회귀분석은 함수의 형태를 가정하지 않는 회귀모형을 의미한다. 모수적 회귀모형에서는 보통 \(Y = \beta_0 + \beta_1X_1 + ... + \beta_pX_p + \epsilon\) 형태의 선형성을 가정했다(모수적 회귀모형에는 선형성을 가정하지 않는 비선형 회귀모형도 포함된다).
+반면에 비모수 회귀모형에서는 고정된 함수의 형태를 가정하지 않고 단순히 smooth function을 가정한다.
+표본 (X_1,Y_1), …(X_n,Y_n)이 주어졌을 때 우리가 추정하고자 하는 회귀 함수는 다음과 같이 정의된다.
+\[Y = m(X) + \epsilon, \quad m(x) = E(Y|X = x), \quad E(\epsilon) = 0\]</description>
+    </item>
+    
+  </channel>
+</rss>

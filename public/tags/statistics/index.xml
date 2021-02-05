@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>statistics on 문과생의 통계학 일기</title>
+    <link>/tags/statistics/</link>
+    <description>Recent content in statistics on 문과생의 통계학 일기</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 06 Jan 2021 00:00:00 +0000</lastBuildDate><atom:link href="/tags/statistics/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>EM algorithm</title>
+      <link>/2021/01/06/em-algorithm/</link>
+      <pubDate>Wed, 06 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/01/06/em-algorithm/</guid>
+      <description>EM 알고리즘 설명EM 알고리즘 정의EM algorithm for Two component Gaussian Mixture
+### motivationdat &amp;lt;- c(-0.39, 0.12, 0.94, 1.67, 1.76, 2.44, 3.72, 4.28, 4.92, 5.53,0.06, 0.48, 1.01, 1.68, 1.80, 3.25, 4.12, 4.60, 5.28, 6.22)hist(dat, probability = T, breaks = seq(-0.5, 6.5, length.out = 15), main = &amp;#39;&amp;#39;)n = 20 데이터는 bimodal 형태를 띄고 있다. 이 데이터는 어떤 분포로부터 나왔는가?우리가 아는 대부분의 분포는 unimodal(단봉) 형태로 bimodal(쌍봉) 형태에 대해서는 잘 모른다.</description>
+    </item>
+    
+    <item>
+      <title>MCMC</title>
+      <link>/2021/01/06/mcmc/</link>
+      <pubDate>Wed, 06 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/2021/01/06/mcmc/</guid>
+      <description>Markov Chain Monte Carlo(MCMC)켤레 사전 분포처럼 분포함수 간에 관계가 있거나 함수가 간단한 형태의 경우 적분을 쉽게 할 수 있다. 하지만 복잡한 함수 형태이거나 high dimension인 경우 Monte carlo integration이나 numerical method를 이용한 적분 방법을 적용하기 힘들다. 이 때 사용하는 방법이 Markov chain Monte Carlo 방법이다.
+Monte Carlo integration의 경우 independence sample을 뽑는데 high dimension인 경우 independence sample을 뽑는 것이 어렵다. 따라서 dependence sample을 뽑아서 이 문제를 해결해보자는 것이 Markov Chain Monte Carlo(MCMC)의 아이디어이다.</description>
+    </item>
+    
+  </channel>
+</rss>
