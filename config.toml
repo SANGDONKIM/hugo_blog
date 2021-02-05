@@ -40,12 +40,16 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_cache$", "\\.knit\\.md$", "\\.utf8\
     height = 50
     alt = "Logo1"
     
-# robots.txt
+[outputs]
+home = ["HTML", "RSS", "JSON"]
+
+
 enableRobotsTXT = true
 
-# sitemap 생성
 [sitemap]
-  changefreq = "monthly"
-  filename = "sitemap.xml"
-  priority = 0.5
+changefreq = "weekly"
+filename = "sitemap.xml"
+
+
+
 
