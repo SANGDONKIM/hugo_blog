@@ -217,14 +217,11 @@ h2o의 단점은 계산 결과에 대한 신뢰성이 부족하다. 치명적인
 
 하지만 parameter 값을 동일하게 세팅해봐도 coefficient, deviance, aic 값이 base glm과 전부 다르다. Example data에 대한 h2o.glm과 base glm의 coefficient를 보면 부호가 다르다. 부호가 다르면 해석이 달라지기 때문에 h2o.glm 결과의 신뢰성에 의문이 생길 수밖에 없는 것 같다.
 
-
-
-
-## GLM 관련 다른 패키지 
+## GLM 관련 다른 패키지
 
 -   pscl : zero inflated regression 관련된 패키지로 R에서는 독보적이다.
 
--   MASS : glm.nb 함수를 이용해서 negative binomial regression을 피팅할 수 있다. negative binomial regression을 피팅할 때 theta 값을 지정해주어야 하는데 MASS 패키지에서는 theta 값을 지정해주지 않아도 패키지 내에서 최적의 theta 값을 찾아준다. (glmnet, h2o, base glm에서는 전부 theta 값을 지정해주어야한다)
+-   MASS : glm.nb 함수를 이용해서 negative binomial regression을 피팅할 수 있다. negative binomial regression을 피팅할 때 dispersion parameter $\theta$ 를 지정해주어야 하는데 MASS 패키지에서는 $\theta$ 를 지정해주지 않아도 패키지 내에서 최적의 $\theta$ 를 찾아준다. glmnet, h2o, base glm에서는 전부 $\theta$ 를 따로 지정해주어야한다.
 
 참고 1 : <https://stackoverflow.com/questions/38378118/lasso-with-lambda-0-and-ols-produce-different-results-in-r-glmnet>
 
