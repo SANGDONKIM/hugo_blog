@@ -1,0 +1,239 @@
+---
+title: 'Generalized Linear Model using R  '
+author: dondon
+date: '2021-02-12'
+slug: generalized-linear-model-using-r
+categories:
+  - R
+tags:
+  - regression
+output:
+  blogdown::html_page:
+      number_sections: true
+      toc: TRUE
+---
+
+```{r, message=F, warning=F}
+library(data.table)
+library(tidyverse)
+library(data.table)
+library(dplyr)
+library(MASS)
+library(pscl)
+library(MASS)
+```
+
+서울시 bike sharing system 관련 분석 프로젝트를 하면서 glm 모형을 이용해서 모델링을 해볼 기회가 있었다. R에는 다양한 glm 관련 패키지가 있는데 각 패키지 별로 장단점이 존재한다. 이 글에서는 프로젝트를 하면서 사용해봤던 glm 패키지의 사용 방법에 대해 정리하고, 각 패키지의 장단점에 대해 기술해보겠다.
+
+## glm 소개
+
+glm은 R에 기본적으로 내장되어있는 함수로 가장 많이 사용된다. 패키지 별로 glm을 어떻게 계산하는지 또는 다른 세팅을 어떻게 가져가는지에 따라 계산 결과가 달라질 수 있다. 따라서 glm 함수를 이용한 결과를 다른 패키지의 계산 결과의 신뢰성을 판단하는 척도로 사용했다. 사용 방법은 기본 lm 함수와 거의 비슷하다. family = link function만 지정해주면 generalized linear model을 피팅해준다. offset, weight 등을 설정하는 방법도 포함되어 있는데 거의 사용할 일은 없는 것 같다.
+
+**Link function**
+
+-   binomial(link = "logit")
+
+-   gaussian(link = "identity")
+
+-   Gamma(link = "inverse")
+
+-   inverse.gaussian(link = "1/mu\^2")
+
+-   poisson(link = "log")
+
+-   quasi(link = "identity", variance = "constant")
+
+-   quasibinomial(link = "logit")
+
+-   quasipoisson(link = "log")
+
+```{r}
+p <- read.csv("https://stats.idre.ucla.edu/stat/data/poisson_sim.csv")
+p <- within(p, {
+  prog <- factor(prog, levels=1:3, labels=c("General", "Academic", 
+                                                     "Vocational"))
+  id <- factor(id)
+})
+
+
+fit1 <- glm(num_awards ~ prog + math, family="poisson", data=p)
+coef(fit1)
+summary(fit1)
+```
+
+## glm 함수의 장단점
+
+R 기본함수로 glm이 잘 세팅되어 있는데 왜 다른 함수가 필요한지 의문일 수 있다. 솔직히 대학교, 대학원 범주형 자료분석 수업을 들을 때만 해도 glm 함수를 이용해서 모델 피팅을 했지 다른 패키지는 찾아볼 필요도 없었다. 그만큼 기본적인 것들이 대부분 세팅되어 있고, 관련 참고 자료나 분석 예시도 대부분 glm 함수를 이용한 것들이었다. 하지만 이번 프로젝트를 하면서 느낀 glm 함수의 치명적인 단점은 **계산 속도** 이다. 가령 설명 변수로 범주를 500개의 level로 구성된 factor를 넣었을 때(일반적으로 이런 일은 별로 없지만) 어떤 모델을 돌릴지에 따라 차이는 있지만 기본적으로 1시간 이상이 소요되었다. 또 **sparse matrix**를 이용한 모델 피팅이나 **penalty term**을 추가하는 등의 모델 피팅을 할 때 어려움이 있다.
+
+## glmnet 소개
+
+glmnet 패키지는 stanford의 통계학과에서 만든 패키지이다. Trevor Hastie, Jerome Friedman, Rob Tibshirani 등 일반화 가법모형, LASSO 등을 개발한 유명한 통계학 교수들이 패키지를 개발하고 공동 관리를 하고 있다. 2021년까지 R 공식문서가 주기적으로 업데이트되고 있다.
+
+glmnet은 glm과 달리 L1, L2 penalty term을 이용해서 모델 피팅을 한다. 따라서 penalty term의 형태, lambda를 어떻게 설정하는지에 따라 모델 피팅이 달라진다.
+
+glmnet 패키지의 glmnet 함수는 glm함수와 link function을 지정해주는 방식은 거의 동일하다.
+
+**Link function**
+
+-   binomial
+
+-   gaussian
+
+-   multinomial
+
+-   poisson
+
+-   cox
+
+-   mgaussian
+
+-   negative.binomial(theta)
+
+glmnet 함수는 glm과 달리 X에 대한 설계행렬을 만들어서 넣어주어야한다. 설계행렬은 model.matrix 함수를 이용해서 쉽게 만들 수 있다.
+
+lambda = 0으로 지정할 경우 penalty term이 없는 glm의 결과와 비슷하다. parameter를 계산하는 방법이 glm함수와 다르기 때문에 coefficient 값이 완전히 같지는 않다. thresh 값을 아주 작게 지정해주면 coefficient 값이 거의 같아진다.
+
+```{r}
+library(glmnet)
+data = model.matrix(num_awards ~ prog + math, data=p)
+fit2 = glmnet(x = data, y = p$num_awards, family = 'poisson', lambda = 0, thresh = 1e-14)
+
+
+coef(fit2)
+coef(fit1)
+```
+
+glm에 penalty term을 추가해서 적합할 경우에 penalty term의 영향력을 조율하는 $\lambda$ 값을 지정해주어야 하는데 glmnet에서는 cross validation을 통해서 최적의 lambda 값을 찾는다. cv.glmnet 함수를 이용해서 mean cross validated error를 최소화하는 최적의 $\lambda$값을 찾을 수 있다.
+
+```{r}
+cvfit2 = cv.glmnet(data, p$num_awards, family = 'poisson')
+plot(cvfit2)
+cvfit2$lambda.min
+coef(cvfit2, s = "lambda.min")
+```
+
+## glmnet의 장단점
+
+glmnet의 장점은 첫 번째로, **계산 속도**이다. base 함수인 glm에 비해서 월등히 빠르다. 가령 설명 변수로 범주를 500개의 level로 구성된 factor를 넣었을 때(일반적으로 이런 일은 별로 없지만) 3분 안에 계산이 되었다. 두 번째로, sparse matrix를 이용할 수 있다. data.matrix에 0의 비율이 많을 경우에 행렬 계산 속도가 현저하게 느려진다. 이를 해결하기 위해서 sparse matrix를 이용한 계산을 수행할 수 있는데 glmnet에서는 model matrix를 sparse matrix 형태로 바꾸기만 하면 이전과 동일하게 적용할 수 있다.
+
+```{r}
+data("SparseExample")
+x
+fit_ex = glmnet(x, y)
+cvfit_ex = cv.glmnet(x, y)
+plot(cvfit_ex)
+coef(cvfit_ex, s = "lambda.min")
+
+# sparsedata <- sparse.model.matrix(y~., data = data)
+# glmnet(x = sparsedata, y = data$y, family = poisson)
+```
+
+glmnet의 단점은 **p-value** 계산이 안된다는 것이다. 즉, coefficient에 대한 significance test를 할 수 없다. penalty term을 이용해서 parameter를 최적화하기 때문에 base 함수인 glm처럼 명시적으로 **p-value** 를 계산할 수 없으며, 따라서 coefficient에 대한 직관적인 해석이 어렵다.
+
+## h2o 소개
+
+h2o는 자바 기반의 machine learning/deep learning 플랫폼이다. glm 관련 패키지를 찾다가 발견했는데 생각보다 많은 모델을 돌릴 수 있고, 분석 뿐만 아니라 모델 배포까지 지원해주는 것 같다. 특정 회사에서 관리하고 있는 것 같은데 전세계적으로 이용하는 패키지이므로 믿고 써도 될 것 같다.
+
+h2o를 사용하기 위해서는 java를 세팅해야 하는데 우선 코드를 돌려보고 error가 뜨면 java 몇 버전을 설치하라고 링크를 알려준다. 링크를 타고 들어가서 java만 버전에 맞게 설치하면 error 없이 동작한다. (혹시 다른 error가 발생할 경우 참고 6 링크)
+
+\*\*Link function\*\*
+
+-   `gaussian`: The data must be numeric (Real or Int). This is the default family.
+
+-   `binomial`: The data must be categorical 2 levels/classes or binary (Enum or Int).
+
+-   `multinomial`: The data can be categorical with more than two levels/classes (Enum).
+
+-   `ordinal`: Requires a categorical response with at least 3 levels. (For 2-class problems use family="binomial".)
+
+-   `quasibinomial`: The data must be numeric.
+
+-   `poisson`: The data must be numeric and non-negative (Int).
+
+-   `gamma`: The data must be numeric and continuous and positive (Real or Int).
+
+-   `tweedie`: The data must be numeric and continuous (Real) and non-negative.
+
+h2o를 사용하기 위해서는 h2o.init 함수를 이용해서 h2o와 연결해주어야 한다. 그리고 as.h2o 함수를 이용해서 h2o 패키지에서 이용할 수 있는 데이터 프레임으로 세팅해주어야 한다.
+
+```{r, warning=F, message = F}
+
+library(h2o)
+head(p)
+h2o.init()
+
+h2o_df <- as.h2o(p)
+```
+
+h2o dataframe을 세팅한 후에는 predictor와 response에 해당하는 **변수명**을 각각 할당해주어야 한다.
+
+h2o.glm은 glm의 다양한 세팅을 지원하는데 glmnet과 유사하다.
+
+**solver**
+
+-   IRLSM: Iteratively Reweighted Least Squares Method (default)
+
+-   L_BFGS: Limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm
+
+-   AUTO: Sets the solver based on given data and parameters.
+
+-   COORDINATE_DESCENT: Coordinate Decent (not available when `family=multinomial`)
+
+-   COORDINATE_DESCENT_NAIVE: Coordinate Decent Naive
+
+-   GRADIENT_DESCENT_LH: Gradient Descent Likelihood (available for Ordinal family only; default for Ordinal family)
+
+-   GRADIENT_DESCENT_SQERR: Gradient Descent Squared Error (available for Ordinal family only)
+
+**IRLSM은 base 함수인 glm의 solver이다**.
+
+**coordinate descent는 glmnet의 solver이다.**
+
+compute_p\_value = T : lambda를 0으로 세팅할 경우에 P-value를 계산해준다.
+
+remove_collinear_columns = T : colinear column을 자동으로 제거할지 여부. lambda = 0일 경우에만 세팅할 수 있다.
+
+```{r}
+predictors <- colnames(p)[c(2,3)]
+response <- colnames(p)[4]
+fit3 <- h2o.glm(x = predictors, y = response, training_frame = h2o_df, 
+                   family = 'poisson', link = 'log', solver = 'IRLSM', lambda = 0,
+                   compute_p_values = T, remove_collinear_columns = T)
+h2o.performance(fit3)
+fit3@model$coefficients_table
+
+```
+
+## h2o의 장단점
+
+h2o의 장점은 첫 번째로, **계산속도이다**. sparse matrix를 이용한 glmnet과 거의 동일한 속도로 계산된다. 따라서 sparse matrix를 따로 만들지 않아도 된다는 장점이 있다. 두 번째로, 패키지의 확장성이다. h2o의 다른 개발관련 함수와 연계하면 모델 배포를 쉽게 할 수 있는 장점이 있을 것 같다. 세 번째로, 쉬운 함수 설정 방식이다. ML 패키지답게 parameter만 세팅하면 쉽게 계산할 수 있게 만든 것 같다.
+
+h2o의 단점은 계산 결과에 대한 신뢰성이 부족하다. 치명적인 단점인 것 같다. 공식 문서에는 glm과 h2o.glm의 결과를 같게 하기 위해서는 다음과 같이 세팅하라고 권고하고 있다.
+
+    solver = "IRLSM"
+    lambda = 0
+    remove_collinear_columns = TRUE
+    compute_p_values = TRUE
+
+하지만 parameter 값을 동일하게 세팅해봐도 coefficient, deviance, aic 값이 base glm과 전부 다르다. Example data에 대한 h2o.glm과 base glm의 coefficient를 보면 부호가 다르다. 부호가 다르면 해석이 달라지기 때문에 h2o.glm 결과의 신뢰성에 의문이 생길 수밖에 없는 것 같다.
+
+
+
+
+## GLM 관련 다른 패키지 
+
+-   pscl : zero inflated regression 관련된 패키지로 R에서는 독보적이다.
+
+-   MASS : glm.nb 함수를 이용해서 negative binomial regression을 피팅할 수 있다. negative binomial regression을 피팅할 때 theta 값을 지정해주어야 하는데 MASS 패키지에서는 theta 값을 지정해주지 않아도 패키지 내에서 최적의 theta 값을 찾아준다. (glmnet, h2o, base glm에서는 전부 theta 값을 지정해주어야한다)
+
+참고 1 : <https://stackoverflow.com/questions/38378118/lasso-with-lambda-0-and-ols-produce-different-results-in-r-glmnet>
+
+참고 2 : <https://cran.r-project.org/web/packages/glmnet/glmnet.pdf>
+
+참고 3 : <https://web.stanford.edu/~hastie/glmnet/glmnet_alpha.html>
+
+참고 4 : <https://stats.stackexchange.com/questions/45449/when-using-glmnet-how-to-report-p-value-significance-to-claim-significance-of-pr>
+
+참고 5 : <https://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/glm.html>
+
+참고 6 : <https://rstudio-pubs-static.s3.amazonaws.com/359032_6d2fa1280f8a40a582c8a40fb46c8c15.html>
