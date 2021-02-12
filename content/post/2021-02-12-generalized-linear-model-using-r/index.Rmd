@@ -118,7 +118,7 @@ glmnet의 장점은 첫 번째로, **계산 속도**이다. base 함수인 glm�
 
 ```{r}
 data("SparseExample")
-x
+head(x)
 fit_ex = glmnet(x, y)
 cvfit_ex = cv.glmnet(x, y)
 plot(cvfit_ex)
