@@ -1,0 +1,377 @@
+---
+title: Tidymodel tutorial
+author: dondon
+date: '2021-03-06'
+slug: tidymodel-tutorial
+categories:
+  - statistics
+tags:
+  - Machine learning
+---
+
+<script src="{{< blogdown/postref >}}index_files/header-attrs/header-attrs.js"></script>
+
+
+<div id="tidymodel-tutorial" class="section level1">
+<h1>tidymodel tutorial</h1>
+<p>tidymodel 설명</p>
+<pre class="r"><code>data(ames)</code></pre>
+<pre class="r"><code>theme_set(theme_bw())
+ggplot(ames, aes(x = Sale_Price)) + 
+  geom_histogram(bins = 50)</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<pre class="r"><code>ames &lt;- ames %&gt;% mutate(Sale_Price = log10(Sale_Price))
+ames %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 x 74
+##   MS_SubClass      MS_Zoning     Lot_Frontage Lot_Area Street Alley   Lot_Shape 
+##   &lt;fct&gt;            &lt;fct&gt;                &lt;dbl&gt;    &lt;int&gt; &lt;fct&gt;  &lt;fct&gt;   &lt;fct&gt;     
+## 1 One_Story_1946_~ Residential_~          141    31770 Pave   No_All~ Slightly_~
+## 2 One_Story_1946_~ Residential_~           80    11622 Pave   No_All~ Regular   
+## 3 One_Story_1946_~ Residential_~           81    14267 Pave   No_All~ Slightly_~
+## 4 One_Story_1946_~ Residential_~           93    11160 Pave   No_All~ Regular   
+## 5 Two_Story_1946_~ Residential_~           74    13830 Pave   No_All~ Slightly_~
+## 6 Two_Story_1946_~ Residential_~           78     9978 Pave   No_All~ Slightly_~
+## # ... with 67 more variables: Land_Contour &lt;fct&gt;, Utilities &lt;fct&gt;,
+## #   Lot_Config &lt;fct&gt;, Land_Slope &lt;fct&gt;, Neighborhood &lt;fct&gt;, Condition_1 &lt;fct&gt;,
+## #   Condition_2 &lt;fct&gt;, Bldg_Type &lt;fct&gt;, House_Style &lt;fct&gt;, Overall_Cond &lt;fct&gt;,
+## #   Year_Built &lt;int&gt;, Year_Remod_Add &lt;int&gt;, Roof_Style &lt;fct&gt;, Roof_Matl &lt;fct&gt;,
+## #   Exterior_1st &lt;fct&gt;, Exterior_2nd &lt;fct&gt;, Mas_Vnr_Type &lt;fct&gt;,
+## #   Mas_Vnr_Area &lt;dbl&gt;, Exter_Cond &lt;fct&gt;, Foundation &lt;fct&gt;, Bsmt_Cond &lt;fct&gt;,
+## #   Bsmt_Exposure &lt;fct&gt;, BsmtFin_Type_1 &lt;fct&gt;, BsmtFin_SF_1 &lt;dbl&gt;,
+## #   BsmtFin_Type_2 &lt;fct&gt;, BsmtFin_SF_2 &lt;dbl&gt;, Bsmt_Unf_SF &lt;dbl&gt;,
+## #   Total_Bsmt_SF &lt;dbl&gt;, Heating &lt;fct&gt;, Heating_QC &lt;fct&gt;, Central_Air &lt;fct&gt;,
+## #   Electrical &lt;fct&gt;, First_Flr_SF &lt;int&gt;, Second_Flr_SF &lt;int&gt;,
+## #   Gr_Liv_Area &lt;int&gt;, Bsmt_Full_Bath &lt;dbl&gt;, Bsmt_Half_Bath &lt;dbl&gt;,
+## #   Full_Bath &lt;int&gt;, Half_Bath &lt;int&gt;, Bedroom_AbvGr &lt;int&gt;, Kitchen_AbvGr &lt;int&gt;,
+## #   TotRms_AbvGrd &lt;int&gt;, Functional &lt;fct&gt;, Fireplaces &lt;int&gt;, Garage_Type &lt;fct&gt;,
+## #   Garage_Finish &lt;fct&gt;, Garage_Cars &lt;dbl&gt;, Garage_Area &lt;dbl&gt;,
+## #   Garage_Cond &lt;fct&gt;, Paved_Drive &lt;fct&gt;, Wood_Deck_SF &lt;int&gt;,
+## #   Open_Porch_SF &lt;int&gt;, Enclosed_Porch &lt;int&gt;, Three_season_porch &lt;int&gt;,
+## #   Screen_Porch &lt;int&gt;, Pool_Area &lt;int&gt;, Pool_QC &lt;fct&gt;, Fence &lt;fct&gt;,
+## #   Misc_Feature &lt;fct&gt;, Misc_Val &lt;int&gt;, Mo_Sold &lt;int&gt;, Year_Sold &lt;int&gt;,
+## #   Sale_Type &lt;fct&gt;, Sale_Condition &lt;fct&gt;, Sale_Price &lt;dbl&gt;, Longitude &lt;dbl&gt;,
+## #   Latitude &lt;dbl&gt;</code></pre>
+<div id="data-split" class="section level2">
+<h2>Data split</h2>
+<ul>
+<li>prop : training data 비율</li>
+<li>strata : classification 문제에서 범주 간 불균형 문제를 해결하기 위해 층을 나누고 샘플링 진행. regression 문제에서는 사분위수를 기준으로 나누고 샘플링 진행</li>
+</ul>
+<pre class="r"><code>set.seed(123)
+ames_split &lt;- initial_split(ames, prop = 0.8, strata = Sale_Price)
+ames_train &lt;- training(ames_split)
+ames_test &lt;- testing(ames_split)</code></pre>
+</div>
+<div id="feature-engineering" class="section level2">
+<h2>Feature engineering</h2>
+<p>tidymodel 패키지는 복잡한 데이터 전처리 과정을 간소화시키기 위해서 총 3단계의 데이터 전처리 프로세스를 도입했다. 각 단계는 recipe(요리 방식을 정의하는 단계), prep(요리 재료를 준비하는 단계), bake(요리를 하는 단계)로 구성된다.</p>
+<p>각 단계별로 살펴보면 첫 번째로, recipe는 사전에 처리할 함수를 정의하는 단계이다. recipe와 연동되는 데이터 전처리에 필요한 함수가 사전 정의되어 있으며, 이를 이용해서 데이터 전처리 과정을 정의한다. 두 번째로, prep은 training set으로 부터 recipe에서 정의한 데이터 전처리 과정을 계산하는 단계이다. 계산 결과를 바로 output으로 출력할 수 없고 bake 함수를 이용해야만 output이 출력된다. bake는 data set에 적용한 prep을 적용해서 output으로 도출하는 단계이다.</p>
+<p>사실 사용하면서 데이터 전처리 과정을 사전 정의한다는 개념이 익숙하지 않았는데 각 단계별 세부 내용을 기술하면서 나름의 이유를 설명해보도록 하겠다.</p>
+<div id="recipe" class="section level3">
+<h3>Recipe</h3>
+<p>데이터 전처리를 위한 단계를 정의하는 object이다. 특이한 점은 즉시 실행되지 않고 단계를 <strong>정의</strong>만한다는 것이다. 왜 번거롭게 recipe를 사용해야 하는지 의문이 생길 수 있다.</p>
+<p>Recipe의 장점은 다음과 같다.</p>
+<ul>
+<li><p>recipe object를 여러가지 모델에 재사용 가능</p></li>
+<li><p>recipe 내에 사전 정의된 함수를 이용하면 코드의 간결성 확보 가능</p></li>
+</ul>
+<p>즉, recipe를 이용해서 사전 정의된 object는 linear regression, random forest, xgboost 등등 tidymodel과 연동된 여러가지 모델에 대해 동일하게 적용할 수 있다. 또 recipe에는 생각보다 다양한 데이터 전처리 관련 함수가 있는데 이를 이용하면 기존에 각 변수별로 정의를 해주어야했던 데이터 전처리 과정을 간결하고 가독성 있는 코드로 구현이 가능하다.</p>
+<p>세부적인 recipe 내에 step_fun은 다음과 같다.</p>
+<ul>
+<li><p>Normalization</p>
+<div>
+<ul>
+<li>step_center(var) - 평균을 빼서 중심 이동</li>
+<li>step_normalize(var) - 평균 빼고, 분산으로 나눠서 표준화</li>
+</ul>
+</div></li>
+<li><p>Filters</p>
+<div>
+<ul>
+<li><p>step_corr(threshold = 0.9) - 상관계수의 절대값이 큰 변수 제거</p></li>
+<li><p>step_rm(var) - 지정된 변수 제거</p></li>
+<li><p>step_zv() - 분산이 0인 변수 제거</p></li>
+<li><p>step_nzv() - 값이 거의 0인 변수 제거</p></li>
+</ul>
+</div></li>
+<li><p>Transformations</p>
+<div>
+<ul>
+<li><p>step_log(var, base = exp(1) ) - 변수 로그 변환</p></li>
+<li><p>step_logit(var) - 변수 로짓 변환</p></li>
+<li><p>step_poly(var, degree = 2) - 변수에 polynomial term 추가(I()가 아닌 poly()와 동일, 즉 orthogonal polynomial 이용)</p></li>
+<li><p>step_BoxCox() - 변수 Boxcox 변환</p></li>
+</ul>
+<pre class="r"><code>examples &lt;- data.frame(matrix(runif(40), ncol = 2))
+rec &lt;- recipe(~ X1 + X2, data = examples)
+rec %&gt;% 
+    step_logit(all_predictors()) %&gt;% 
+    prep() %&gt;% 
+    bake(examples)</code></pre>
+<pre><code>## # A tibble: 20 x 2
+##         X1      X2
+##      &lt;dbl&gt;   &lt;dbl&gt;
+##  1  0.337   1.79  
+##  2  0.701   0.838 
+##  3  0.0453  0.774 
+##  4  1.17   -0.628 
+##  5  2.24    0.220 
+##  6  1.52   -1.84  
+##  7 -2.56    1.29  
+##  8 -5.54    2.06  
+##  9 -2.90   -1.36  
+## 10  1.87    1.21  
+## 11  0.307   0.390 
+## 12 -0.782   3.12  
+## 13  3.16   -1.67  
+## 14  0.369   0.104 
+## 15  0.126   1.93  
+## 16 -0.473   1.90  
+## 17 -0.756  -3.72  
+## 18  1.44    3.70  
+## 19 -3.13   -0.0391
+## 20 -0.559  -0.451</code></pre>
+</div></li>
+<li><p>Discretization</p>
+<div>
+<ul>
+<li><p>step_discretize(var, num_breaks = 4) - 연속형 변수 이산형으로 변환</p></li>
+<li><p>step_cut() - 연속형 변수를 지정한 값을 기준으로 이산형으로 변환</p>
+<div>
+<ul>
+<li><p>include_outside_range - 지정한 범위를 넘어선 값을 양끝 break에 포함시킬지 여부. default = FALSE이며 결측치 처리됨</p></li>
+<li><p>breaks - 절단 기준이 되는 값</p></li>
+</ul>
+</div></li>
+</ul>
+<pre class="r"><code>df &lt;- data.frame(x = 1:10, y = 5:14)
+rec &lt;- recipe(df)
+rec %&gt;%
+    step_cut(x, y, breaks = c(6, 9), include_outside_range = TRUE) %&gt;%
+    prep() %&gt;%
+    bake(df)</code></pre>
+<pre><code>## # A tibble: 10 x 2
+##    x       y      
+##    &lt;fct&gt;   &lt;fct&gt;  
+##  1 [min,6] [min,6]
+##  2 [min,6] [min,6]
+##  3 [min,6] (6,9]  
+##  4 [min,6] (6,9]  
+##  5 [min,6] (6,9]  
+##  6 [min,6] (9,max]
+##  7 (6,9]   (9,max]
+##  8 (6,9]   (9,max]
+##  9 (6,9]   (9,max]
+## 10 (9,max] (9,max]</code></pre>
+</div></li>
+<li><p>Dummy variables and encodings</p>
+<div>
+<ul>
+<li><p>step_date() - date 변수에서 year, month, day of week 변수를 새롭게 생성</p>
+<ul>
+<li><p>feature = c(‘dow’, ‘month’, ‘year’) - 요일, 달, 연도 변수 추가</p></li>
+<li><p>abbr = T - Sunday or Sun</p></li>
+<li><p>label = Sunday or number</p></li>
+</ul></li>
+<li><p>step_holiday() - date 변수에서 공휴일에 관한 이진변수 새롭게 생성</p>
+<div>
+<ul>
+<li><p>holidays = c(‘LaborDay’, ‘NewYearDay’, ‘ChristmasDay’)</p></li>
+<li><p>holidays = timeDate::listHolidays(‘US’)</p></li>
+</ul>
+</div></li>
+</ul>
+<pre class="r"><code>examples &lt;- data.frame(someday = ymd(&quot;2000-12-20&quot;) + days(0:40))
+holiday_rec &lt;- recipe(~ someday, examples) %&gt;%
+    step_holiday(all_predictors())
+
+holiday_rec &lt;- prep(holiday_rec, training = examples)
+holiday_values &lt;- bake(holiday_rec, new_data = examples)
+holiday_values</code></pre>
+<pre><code>## # A tibble: 41 x 4
+##    someday    someday_LaborDay someday_NewYearsDay someday_ChristmasDay
+##    &lt;date&gt;                &lt;dbl&gt;               &lt;dbl&gt;                &lt;dbl&gt;
+##  1 2000-12-20                0                   0                    0
+##  2 2000-12-21                0                   0                    0
+##  3 2000-12-22                0                   0                    0
+##  4 2000-12-23                0                   0                    0
+##  5 2000-12-24                0                   0                    0
+##  6 2000-12-25                0                   0                    1
+##  7 2000-12-26                0                   0                    0
+##  8 2000-12-27                0                   0                    0
+##  9 2000-12-28                0                   0                    0
+## 10 2000-12-29                0                   0                    0
+## # ... with 31 more rows</code></pre>
+<ul>
+<li><p>step_dummy() - character or factor 변수를 더미변수로 변환</p>
+<div>
+<ul>
+<li>one_hot = TRUE - C +1개의 더미변수 생성(one_hot = F: C-1개 더미변수 생성</li>
+</ul>
+</div></li>
+</ul>
+<pre class="r"><code>iris &lt;- iris %&gt;% mutate(original = Species)
+iris_rec &lt;- recipe( ~ ., data = iris)
+ref_cell &lt;- 
+  iris_rec %&gt;% 
+  step_dummy(Species) %&gt;%
+  prep(training = iris)
+
+juice(ref_cell, original, starts_with(&quot;Species&quot;)) %&gt;%
+    distinct()</code></pre>
+<pre><code>## # A tibble: 3 x 3
+##   original   Species_versicolor Species_virginica
+##   &lt;fct&gt;                   &lt;dbl&gt;             &lt;dbl&gt;
+## 1 setosa                      0                 0
+## 2 versicolor                  1                 0
+## 3 virginica                   0                 1</code></pre>
+<ul>
+<li><p>step_other() - 범주형 변수의 level이 여러개일 때, 하위 범주를 기타로 묶음</p>
+<div>
+<ul>
+<li><p>threshold = 0.05 - 하위 5% 범주는 기타로 묶임</p></li>
+<li><p>other : 기타로 지정할 level 이름 지정</p></li>
+</ul>
+</div></li>
+<li><p>step_interact() - 상호작용 항 추가</p></li>
+</ul>
+<pre class="r"><code>iris_int &lt;- 
+  iris_rec %&gt;%
+  step_interact( ~ Sepal.Width:Sepal.Length) %&gt;%
+  prep(training = iris)
+summary(iris_int)</code></pre>
+<pre><code>## # A tibble: 7 x 4
+##   variable                   type    role      source  
+##   &lt;chr&gt;                      &lt;chr&gt;   &lt;chr&gt;     &lt;chr&gt;   
+## 1 Sepal.Length               numeric predictor original
+## 2 Sepal.Width                numeric predictor original
+## 3 Petal.Length               numeric predictor original
+## 4 Petal.Width                numeric predictor original
+## 5 Species                    nominal predictor original
+## 6 original                   nominal predictor original
+## 7 Sepal.Width_x_Sepal.Length numeric predictor derived</code></pre>
+</div></li>
+</ul>
+<pre class="r"><code>table(ames_train$Bldg_Type)</code></pre>
+<pre><code>## 
+##   OneFam TwoFmCon   Duplex    Twnhs   TwnhsE 
+##     1945       51       83       79      188</code></pre>
+<pre class="r"><code>simple_ames &lt;- 
+  recipe(Sale_Price ~ Neighborhood + Gr_Liv_Area + Year_Built + Bldg_Type,
+         data = ames_train) %&gt;%
+  step_log(Gr_Liv_Area, base = 10) %&gt;% 
+  step_dummy(all_nominal())
+simple_ames</code></pre>
+<pre><code>## Data Recipe
+## 
+## Inputs:
+## 
+##       role #variables
+##    outcome          1
+##  predictor          4
+## 
+## Operations:
+## 
+## Log transformation on Gr_Liv_Area
+## Dummy variables from all_nominal()</code></pre>
+</div>
+<div id="prep" class="section level3">
+<h3>Prep</h3>
+<p>recipe object를 설정한 후에 prep을 이용해서 계산을 한다.</p>
+<pre class="r"><code>simple_ames &lt;- prep(simple_ames, training = ames_train)
+simple_ames</code></pre>
+<pre><code>## Data Recipe
+## 
+## Inputs:
+## 
+##       role #variables
+##    outcome          1
+##  predictor          4
+## 
+## Training data contained 2346 data points and no missing data.
+## 
+## Operations:
+## 
+## Log transformation on Gr_Liv_Area [trained]
+## Dummy variables from Neighborhood, Bldg_Type [trained]</code></pre>
+</div>
+<div id="bake" class="section level3">
+<h3>Bake</h3>
+<p>recipe, prep을 거쳐서 전처리된 데이터를 이용해서 적용을 해보는 단계이다.</p>
+<p>데이터 전처리를 완료한 결과를 보고 싶으면 bake 함수를 이용하면 되는데 training data를 기준으로 이전에 데이터 전처리를 했기 때문에 <strong>new_data = training set을</strong> 넣고 중복 계산할 필요가 없다.</p>
+<pre class="r"><code>bake(simple_ames, new_data = NULL)</code></pre>
+<pre><code>## # A tibble: 2,346 x 35
+##    Gr_Liv_Area Year_Built Sale_Price Neighborhood_College_C~ Neighborhood_Old_T~
+##          &lt;dbl&gt;      &lt;int&gt;      &lt;dbl&gt;                   &lt;dbl&gt;               &lt;dbl&gt;
+##  1        3.22       1960       5.33                       0                   0
+##  2        2.95       1961       5.02                       0                   0
+##  3        3.12       1958       5.24                       0                   0
+##  4        3.21       1997       5.28                       0                   0
+##  5        3.21       1998       5.29                       0                   0
+##  6        3.13       2001       5.33                       0                   0
+##  7        3.11       1992       5.28                       0                   0
+##  8        3.21       1995       5.37                       0                   0
+##  9        3.22       1993       5.25                       0                   0
+## 10        3.17       1998       5.26                       0                   0
+## # ... with 2,336 more rows, and 30 more variables: Neighborhood_Edwards &lt;dbl&gt;,
+## #   Neighborhood_Somerset &lt;dbl&gt;, Neighborhood_Northridge_Heights &lt;dbl&gt;,
+## #   Neighborhood_Gilbert &lt;dbl&gt;, Neighborhood_Sawyer &lt;dbl&gt;,
+## #   Neighborhood_Northwest_Ames &lt;dbl&gt;, Neighborhood_Sawyer_West &lt;dbl&gt;,
+## #   Neighborhood_Mitchell &lt;dbl&gt;, Neighborhood_Brookside &lt;dbl&gt;,
+## #   Neighborhood_Crawford &lt;dbl&gt;, Neighborhood_Iowa_DOT_and_Rail_Road &lt;dbl&gt;,
+## #   Neighborhood_Timberland &lt;dbl&gt;, Neighborhood_Northridge &lt;dbl&gt;,
+## #   Neighborhood_Stone_Brook &lt;dbl&gt;,
+## #   Neighborhood_South_and_West_of_Iowa_State_University &lt;dbl&gt;,
+## #   Neighborhood_Clear_Creek &lt;dbl&gt;, Neighborhood_Meadow_Village &lt;dbl&gt;,
+## #   Neighborhood_Briardale &lt;dbl&gt;, Neighborhood_Bloomington_Heights &lt;dbl&gt;,
+## #   Neighborhood_Veenker &lt;dbl&gt;, Neighborhood_Northpark_Villa &lt;dbl&gt;,
+## #   Neighborhood_Blueste &lt;dbl&gt;, Neighborhood_Greens &lt;dbl&gt;,
+## #   Neighborhood_Green_Hills &lt;dbl&gt;, Neighborhood_Landmark &lt;dbl&gt;,
+## #   Neighborhood_Hayden_Lake &lt;dbl&gt;, Bldg_Type_TwoFmCon &lt;dbl&gt;,
+## #   Bldg_Type_Duplex &lt;dbl&gt;, Bldg_Type_Twnhs &lt;dbl&gt;, Bldg_Type_TwnhsE &lt;dbl&gt;</code></pre>
+<p>test 데이터를 기준으로 전처리를 진행할 때 <strong>new_data = test set</strong>을 넣어주기만 하면 recipe, prep을 재지정해줄 필요 없이 곧바로 데이터 전처리가 가능하다.</p>
+<pre class="r"><code>test_ex &lt;- bake(simple_ames, new_data = ames_test)
+names(test_ex) %&gt;% head()</code></pre>
+<pre><code>## [1] &quot;Gr_Liv_Area&quot;                &quot;Year_Built&quot;                
+## [3] &quot;Sale_Price&quot;                 &quot;Neighborhood_College_Creek&quot;
+## [5] &quot;Neighborhood_Old_Town&quot;      &quot;Neighborhood_Edwards&quot;</code></pre>
+<pre class="r"><code>test_ex</code></pre>
+<pre><code>## # A tibble: 584 x 35
+##    Gr_Liv_Area Year_Built Sale_Price Neighborhood_College_C~ Neighborhood_Old_T~
+##          &lt;dbl&gt;      &lt;int&gt;      &lt;dbl&gt;                   &lt;dbl&gt;               &lt;dbl&gt;
+##  1        3.32       1968       5.39                       0                   0
+##  2        3.26       1999       5.28                       0                   0
+##  3        3.07       1992       5.27                       0                   0
+##  4        3.13       1990       5.23                       0                   0
+##  5        3.13       1999       5.26                       0                   0
+##  6        3.04       1971       5.02                       0                   0
+##  7        3.23       2007       5.49                       0                   0
+##  8        3.12       2005       5.30                       0                   0
+##  9        3.29       2002       5.34                       0                   0
+## 10        3.39       1998       5.55                       0                   0
+## # ... with 574 more rows, and 30 more variables: Neighborhood_Edwards &lt;dbl&gt;,
+## #   Neighborhood_Somerset &lt;dbl&gt;, Neighborhood_Northridge_Heights &lt;dbl&gt;,
+## #   Neighborhood_Gilbert &lt;dbl&gt;, Neighborhood_Sawyer &lt;dbl&gt;,
+## #   Neighborhood_Northwest_Ames &lt;dbl&gt;, Neighborhood_Sawyer_West &lt;dbl&gt;,
+## #   Neighborhood_Mitchell &lt;dbl&gt;, Neighborhood_Brookside &lt;dbl&gt;,
+## #   Neighborhood_Crawford &lt;dbl&gt;, Neighborhood_Iowa_DOT_and_Rail_Road &lt;dbl&gt;,
+## #   Neighborhood_Timberland &lt;dbl&gt;, Neighborhood_Northridge &lt;dbl&gt;,
+## #   Neighborhood_Stone_Brook &lt;dbl&gt;,
+## #   Neighborhood_South_and_West_of_Iowa_State_University &lt;dbl&gt;,
+## #   Neighborhood_Clear_Creek &lt;dbl&gt;, Neighborhood_Meadow_Village &lt;dbl&gt;,
+## #   Neighborhood_Briardale &lt;dbl&gt;, Neighborhood_Bloomington_Heights &lt;dbl&gt;,
+## #   Neighborhood_Veenker &lt;dbl&gt;, Neighborhood_Northpark_Villa &lt;dbl&gt;,
+## #   Neighborhood_Blueste &lt;dbl&gt;, Neighborhood_Greens &lt;dbl&gt;,
+## #   Neighborhood_Green_Hills &lt;dbl&gt;, Neighborhood_Landmark &lt;dbl&gt;,
+## #   Neighborhood_Hayden_Lake &lt;dbl&gt;, Bldg_Type_TwoFmCon &lt;dbl&gt;,
+## #   Bldg_Type_Duplex &lt;dbl&gt;, Bldg_Type_Twnhs &lt;dbl&gt;, Bldg_Type_TwnhsE &lt;dbl&gt;</code></pre>
+<p>내용 추가</p>
+</div>
+</div>
+<div id="참고-문헌" class="section level2">
+<h2>참고 문헌</h2>
+<p><a href="https://www.tmwr.org/ames.html">tidymodel with R bookdown</a></p>
+<p><a href="https://recipes.tidymodels.org/reference/index.html">tidymodel recipe object</a></p>
+<p><a href="%5Btidymodel%20recipe%20object%5D(https://recipes.tidymodels.org/reference/index.html)">How are categorical predictors handled in recipes?</a></p>
+</div>
+</div>

@@ -1,11 +1,12 @@
 ---
-title: tidymodel tutorial
-author: ''
+title: Tidymodel tutorial
+author: dondon
 date: '2021-03-06'
-slug: tidymodeltutorial
+slug: tidymodel-tutorial
 categories:
   - statistics
-tags: []
+tags:
+  - Machine learning
 ---
 
 # tidymodel tutorial
@@ -253,6 +254,9 @@ names(test_ex) %>% head()
 test_ex
 
 ```
+
+
+내용 추가 
 
 ## 참고 문헌
 
