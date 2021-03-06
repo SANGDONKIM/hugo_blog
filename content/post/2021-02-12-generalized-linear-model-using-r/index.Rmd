@@ -21,6 +21,7 @@ library(dplyr)
 library(MASS)
 library(pscl)
 library(MASS)
+library(glmnet)
 ```
 
 서울시 bike sharing system 관련 분석 프로젝트를 하면서 glm 모형을 이용해서 모델링을 해볼 기회가 있었다. R에는 다양한 glm 관련 패키지가 있는데 각 패키지 별로 장단점이 존재한다. 이 글에서는 프로젝트를 하면서 사용해봤던 glm 패키지의 사용 방법에 대해 정리하고, 각 패키지의 장단점에 대해 기술해보겠다.
@@ -63,7 +64,7 @@ summary(fit1)
 
 ## glm 함수의 장단점
 
-R 기본함수로 glm이 잘 세팅되어 있는데 왜 다른 함수가 필요한지 의문일 수 있다. 솔직히 대학교, 대학원 범주형 자료분석 수업을 들을 때만 해도 glm 함수를 이용해서 모델 피팅을 했지 다른 패키지는 찾아볼 필요도 없었다. 그만큼 기본적인 것들이 대부분 세팅되어 있고, 관련 참고 자료나 분석 예시도 대부분 glm 함수를 이용한 것들이었다. 하지만 이번 프로젝트를 하면서 느낀 glm 함수의 치명적인 단점은 **계산 속도** 이다. 가령 설명 변수로 범주를 500개의 level로 구성된 factor를 넣었을 때(일반적으로 이런 일은 별로 없지만) 어떤 모델을 돌릴지에 따라 차이는 있지만 기본적으로 1시간 이상이 소요되었다. 또 **sparse matrix**를 이용한 모델 피팅이나 **penalty term**을 추가하는 등의 모델 피팅을 할 때 어려움이 있다.
+R 기본함수로 glm이 잘 세팅되어 있는데 왜 다른 함수가 필요한지 의문일 수 있다. 솔직히 대학교, 대학원 범주형 자료분석 수업을 들을 때만 해도 glm 함수를 이용해서 모델 피팅을 했지 다른 패키지는 찾아볼 필요도 없었다. 그만큼 기본적인 것들이 대부분 세팅되어 있고, 관련 참고 자료나 분석 예시도 대부분 glm 함수를 이용한 것들이었다. 하지만 이번 프로젝트를 하면서 느낀 glm 함수의 치명적인 단점은 **계산 속도** 이다. 가령 설명 변수로 범주를 500개의 level로 구성된 factor를 넣었을 때(일반적으로 이런 일은 별로 없지만) 어떤 모델을 돌릴지에 따라 차이는 있지만 기본적으로 2시간 이상이 소요되었다. 또 **sparse matrix**를 이용한 모델 피팅이나 **penalty term**을 추가하는 등의 모델 피팅을 할 때 어려움이 있다.
 
 ## glmnet 소개
 
@@ -91,7 +92,7 @@ glmnet 패키지의 glmnet 함수는 glm함수와 link function을 지정해주�
 
 glmnet 함수는 glm과 달리 X에 대한 설계행렬을 만들어서 넣어주어야한다. 설계행렬은 model.matrix 함수를 이용해서 쉽게 만들 수 있다.
 
-lambda = 0으로 지정할 경우 penalty term이 없는 glm의 결과와 비슷하다. parameter를 계산하는 방법이 glm함수와 다르기 때문에 coefficient 값이 완전히 같지는 않다. thresh 값을 아주 작게 지정해주면 coefficient 값이 거의 같아진다.
+lambda = 0으로 지정할 경우 penalty term이 없는 glm의 결과와 비슷하다. parameter를 계산하는 방법이 glm함수와 다르기 때문에 coefficient 값이 완전히 같지는 않다. 이 때 coefficient 값을 최대한 같게 만들어주는 방법은 thresh 값을 조정해주는 것이다. thresh 값을 아주 작게 지정해주면 coefficient 값이 거의 같아진다.
 
 ```{r}
 library(glmnet)
@@ -114,7 +115,7 @@ coef(cvfit2, s = "lambda.min")
 
 ## glmnet의 장단점
 
-glmnet의 장점은 첫 번째로, **계산 속도**이다. base 함수인 glm에 비해서 월등히 빠르다. 가령 설명 변수로 범주를 500개의 level로 구성된 factor를 넣었을 때(일반적으로 이런 일은 별로 없지만) 3분 안에 계산이 되었다. 두 번째로, sparse matrix를 이용할 수 있다. data.matrix에 0의 비율이 많을 경우에 행렬 계산 속도가 현저하게 느려진다. 이를 해결하기 위해서 sparse matrix를 이용한 계산을 수행할 수 있는데 glmnet에서는 model matrix를 sparse matrix 형태로 바꾸기만 하면 이전과 동일하게 적용할 수 있다.
+glmnet의 장점은 첫 번째로, **계산 속도**이다. base 함수인 glm에 비해서 월등히 빠르다. 가령 설명 변수로 범주를 500개의 level로 구성된 factor를 넣었을 때(일반적으로 이런 일은 별로 없지만) 3분 안에 계산이 되었다. base glm에 비해 약 40배 빠르다. 두 번째로, sparse matrix를 이용할 수 있다. data.matrix에 0의 비율이 많을 경우에 행렬 계산 속도가 현저하게 느려진다. 이를 해결하기 위해서 sparse matrix를 이용한 계산을 수행할 수 있는데 glmnet에서는 model matrix를 sparse matrix 형태로 바꾸기만 하면 이전과 동일하게 적용할 수 있다.
 
 ```{r}
 data("SparseExample")
