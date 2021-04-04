@@ -81,7 +81,12 @@ ames_test &lt;- testing(ames_split)</code></pre>
 <li><p>recipe 내에 사전 정의된 함수를 이용하면 코드의 간결성 확보 가능</p></li>
 </ul>
 <p>즉, recipe를 이용해서 사전 정의된 object는 linear regression, random forest, xgboost 등등 tidymodel과 연동된 여러가지 모델에 대해 동일하게 적용할 수 있다. 또 recipe에는 생각보다 다양한 데이터 전처리 관련 함수가 있는데 이를 이용하면 기존에 각 변수별로 정의를 해주어야했던 데이터 전처리 과정을 간결하고 가독성 있는 코드로 구현이 가능하다.</p>
-<p>세부적인 recipe 내에 step_fun은 다음과 같다.</p>
+<pre class="r"><code>ames_rec &lt;- 
+  recipe(sale_price ~ ., data = ames_train) %&gt;%
+  step_string2factor(all_nominal()) %&gt;% 
+  step_other(all_nominal(), threshold = 0.01) %&gt;%
+  step_nzv(all_nominal())</code></pre>
+<p>recipe 내에 step_function은 다음과 같다. 이외에도 imputation 관련 다양한 함수가 존재하며, 데이터 전처리에 필요한 거의 대부분의 함수가 내장되어있다.</p>
 <ul>
 <li><p>Normalization</p>
 <div>
@@ -155,11 +160,6 @@ ames_test &lt;- testing(ames_split)</code></pre>
 </ul>
 </div></li>
 </ul>
-<pre class="r"><code>ames_rec &lt;- 
-  recipe(sale_price ~ ., data = ames_train) %&gt;%
-  step_string2factor(all_nominal()) %&gt;% 
-  step_other(all_nominal(), threshold = 0.01) %&gt;%
-  step_nzv(all_nominal())</code></pre>
 </div>
 <div id="prep" class="section level2">
 <h2>Prep</h2>
@@ -283,10 +283,10 @@ pred_lasso %&gt;% head()</code></pre>
 ## 4 198485. LASSO 
 ## 5 133947. LASSO 
 ## 6 304533. LASSO</code></pre>
-<div id="참고-문헌" class="section level2">
-<h2>참고 문헌</h2>
+</div>
+<div id="참고-문헌" class="section level1">
+<h1>참고 문헌</h1>
 <p><a href="https://www.tmwr.org/ames.html">tidymodel with R bookdown</a></p>
 <p><a href="https://recipes.tidymodels.org/reference/index.html">tidymodel recipe object</a></p>
 <p><a href="%5Btidymodel%20recipe%20object%5D(https://recipes.tidymodels.org/reference/index.html)">How are categorical predictors handled in recipes?</a></p>
-</div>
 </div>

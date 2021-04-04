@@ -74,7 +74,16 @@ Recipe의 장점은 다음과 같다.
 
 즉, recipe를 이용해서 사전 정의된 object는 linear regression, random forest, xgboost 등등 tidymodel과 연동된 여러가지 모델에 대해 동일하게 적용할 수 있다. 또 recipe에는 생각보다 다양한 데이터 전처리 관련 함수가 있는데 이를 이용하면 기존에 각 변수별로 정의를 해주어야했던 데이터 전처리 과정을 간결하고 가독성 있는 코드로 구현이 가능하다.
 
-세부적인 recipe 내에 step_fun은 다음과 같다.
+```{r}
+ames_rec <- 
+  recipe(sale_price ~ ., data = ames_train) %>%
+  step_string2factor(all_nominal()) %>% 
+  step_other(all_nominal(), threshold = 0.01) %>%
+  step_nzv(all_nominal())
+```
+
+
+recipe 내에 step_function은 다음과 같다. 이외에도 imputation 관련 다양한 함수가 존재하며, 데이터 전처리에 필요한 거의 대부분의 함수가 내장되어있다.   
 
 -   Normalization
 
@@ -177,13 +186,6 @@ Recipe의 장점은 다음과 같다.
 
     </div>
 
-```{r}
-ames_rec <- 
-  recipe(sale_price ~ ., data = ames_train) %>%
-  step_string2factor(all_nominal()) %>% 
-  step_other(all_nominal(), threshold = 0.01) %>%
-  step_nzv(all_nominal())
-```
 
 ## Prep
 
