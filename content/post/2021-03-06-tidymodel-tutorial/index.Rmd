@@ -311,7 +311,9 @@ pred_lasso <-
 pred_lasso %>% head()
 ```
 
-## 참고 문헌
+
+
+# 참고 문헌
 
 [tidymodel with R bookdown](https://www.tmwr.org/ames.html)
 
