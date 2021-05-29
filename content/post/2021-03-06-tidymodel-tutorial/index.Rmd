@@ -82,8 +82,7 @@ ames_rec <-
   step_nzv(all_nominal())
 ```
 
-
-recipe 내에 step_function은 다음과 같다. 이외에도 imputation 관련 다양한 함수가 존재하며, 데이터 전처리에 필요한 거의 대부분의 함수가 내장되어있다.   
+recipe 내에 step_function은 다음과 같다. 이외에도 imputation 관련 다양한 함수가 존재하며, 데이터 전처리에 필요한 거의 대부분의 함수가 내장되어있다.
 
 -   Normalization
 
@@ -186,7 +185,6 @@ recipe 내에 step_function은 다음과 같다. 이외에도 imputation 관련 
 
     </div>
 
-
 ## Prep
 
 recipe object를 설정한 후에 prep을 이용해서 계산을 한다.
@@ -263,7 +261,6 @@ vb_folds
 
 **tune_grid()는** 하이퍼파라미터 튜닝을 수행하는 함수이다. **tune_grid()**에는 워크플로우(lasso_wf), 교차검증셋(vb_folds), 튜닝 방식(lambda_grid)이 지정되어야한다. control 옵션은 최종 모델 피팅 후에 pred 값을 저장해주는 옵션이다. 옵션을 지정해놓으면 모델 피팅 후에 ROC plot을 그리거나 다른 기타 그래프로 그리는데 사용할 수 있다.
 
-
 ```{r}
 lasso_res <- tune_grid(
     lasso_wf, 
@@ -304,7 +301,8 @@ final_lasso
 lasso_fit <- fit(final_lasso, data = ames_train_prepped)
 ```
 
-마지막으로 test set에 모형을 적합시켜서 결과를 확인한다.   
+마지막으로 test set에 모형을 적합시켜서 결과를 확인한다.
+
 ```{r}
 pred_lasso <- 
     predict(lasso_fit, ames_test_prepped) %>% 
@@ -312,8 +310,6 @@ pred_lasso <-
 
 pred_lasso %>% head()
 ```
-
-
 
 # 참고 문헌
 
