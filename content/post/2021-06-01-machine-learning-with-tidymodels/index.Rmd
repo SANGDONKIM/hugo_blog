@@ -1,0 +1,323 @@
+---
+title: 'Machine learning with tidymodels '
+author: "dondon"
+date: '2021-06-01'
+slug: machine-learning-with-tidymodels
+categories: statistics
+tags: Machine learning
+---
+
+# Machine learning tutorial
+
+adp 시험을 대비해서 대표적인 machine learning 모델 몇 가지를 골라서 tutorial 자료를 만들고자 한다. tidymodels 의 workflow는 패키지가 달라도 항상 동일하기 때문에 튜닝 파라미터를 제외하면 달라지는건 없는 것 같다. 시험이 3일 남았지만 이번 기회에 한번 정리를 해본다(ADP 관련 내용은 관련 후기 글을 보고 비슷하게 따라해본 내용이므로 참고만 하는 것이 좋다).
+
+## packages
+
+```{r, include=F, message=F, warning=F}
+library(tidymodels)
+library(tidyverse)
+library(lubridate)
+library(data.table)
+
+theme_set(theme_bw())
+```
+
+# 1. 시계열 온도 예측 모델
+
+-   데이터 전처리 : 결측값 처리, 필요없는 칼럼 삭제, 데이터 전처리가 되었다는 증명, train/test 분리
+
+-   Random forest 모델 적합
+
+-   Random forest 예측 한계선을 설정하는 방법을 말하고 어떤 방법을 써야하는지 설명
+
+-   Random forest를 활용해 예측 및 검증, 파라미터 튜닝
+
+-   변수 중요도 시각화
+
+-   svm을 이용해 예측 및 검증, 파라미터 튜닝
+
+-   변수 중요도 시각화
+
+-   svm과 rf 장·단점 설명하기
+
+-   두 모델 중에 어떤 모델이 좋은지 선택하고 설명하기
+
+-   선택한 모델의 한계점을 설명하고 한계점을 해결할 방법 설명하기
+
+## Data description
+
+-   temp_2 : 2일 전 최대 온도
+-   temp_1 : 1일 전 최대 온도
+-   average : 과거 평균 최대 온도
+-   actual : 실제 최대 온도
+-   friend : 친구의 예측값, random number
+-   기타 등등..
+
+## Data preprocessing
+
+### 데이터 불러오기
+
+```{r}
+dat <- fread('temps.csv')
+head(dat)
+```
+
+### 변수 속성 확인
+
+날짜 변수의 속성이 integer이므로 변환이 필요해보인다.
+
+```{r}
+glimpse(dat)
+```
+
+### 변수 삭제, 날짜 변수 처리
+
+year, month, day를 하나로 묶어서 date라는 파생변수를 만들었다. 파생 변수를 만들지 않고, 날짜 변수 각각을 lubridate로 처리하려고 하면 골치아프다. 파생변수 date를 이용해서 date를 다시 만들고, year 변수의 경우 2016년만 있기 때문에 제외했다. week 변수의 경우 factor로 변경했다.
+
+```{r}
+
+dat %>% select(-starts_with('forecast_'), -friend) %>% 
+                mutate(date = paste0(year, '-', month, '-', day)) %>% 
+                select(-c(year, month, day, week)) %>% 
+                mutate(date = ymd(date), 
+                       year = year(date), 
+                       month = month(date), 
+                       day = day(date), 
+                       week = weekdays(date)) %>% 
+                select(-c(date, year)) %>% 
+                select(month, week, day, everything()) %>% 
+                mutate(week = as.factor(week)) -> dat
+                
+glimpse(dat)                
+summary(dat)
+
+```
+
+### 결측치 확인
+
+n_missing을 보면 결측치는 존재하지 않는 것으로 확인된다.
+
+```{r}
+skimr::skim(dat)
+dat %>% is.na() %>% colSums()
+```
+
+### train/test split
+
+train/test를 7:3 비율로 나눠주었다.
+
+```{r}
+set.seed(123)
+splits <- initial_split(dat, prop = 0.7, strata = actual)
+train <- training(splits)
+test <- testing(splits)
+
+```
+
+## Random forest Model fitting
+
+### Recipe
+
+week 변수를 one-hot encoding 으로 변환해주었다.
+
+```{r}
+model_rec <- train %>% recipe(actual~.) %>% 
+                step_dummy(week, one_hot = T) 
+
+train2 <- model_rec %>% prep() %>% juice()
+test2 <- model_rec %>% prep() %>% bake(new_data = test)
+```
+
+### create cv
+
+모델 평가를 위해서 validation set을 생성해주었다.
+
+```{r}
+set.seed(123)
+vb_folds <- vfold_cv(train2, v = 3, strata = actual)
+
+```
+
+### Model fitting
+
+random forest를 적합시키고 파라미터 튜닝을 실시했다.
+
+```{r}
+rf_spec <- rand_forest(
+                mtry = tune(), 
+                trees = 100) %>% 
+                set_mode('regression') %>% 
+                set_engine('ranger')
+
+rf_wf <- workflow() %>% 
+                add_formula(actual~.) %>% 
+                add_model(rf_spec)
+
+library(tictoc)
+tic()
+
+
+set.seed(1234)
+rf_res <- tune_grid(
+    rf_wf,  
+    resamples = vb_folds, 
+    grid = 30,
+    metrics = metric_set(rmse), 
+    control = control_grid(save_pred = T)  
+)
+toc() # 10.5 sec
+
+best_param_rf <- select_best(rf_res) 
+final_rf <- finalize_workflow(rf_wf, best_param_rf)
+final_rf
+```
+
+### Model performance check
+
+모델 성능을 확인해보았다.
+
+```{r}
+final_rf_model <- finalize_model(rf_spec, best_param_rf) 
+final_rf_workflow <- rf_wf %>% update_model(final_rf_model)
+rf_fit <- fit(final_rf_workflow, data = train2)
+
+pred <- predict(rf_fit, test2 %>% select(-actual))
+actual <- test2$actual
+
+results <- tibble(pred, actual)
+
+metrics(results, truth = actual, estimate = .pred)
+```
+
+### Feature importance plot
+
+```{r}
+library(vip)
+
+imp_spec <- rf_spec %>%
+  finalize_model(best_param_rf) %>%
+  set_engine("ranger", importance = "permutation")
+
+workflow() %>%
+  add_recipe(model_rec) %>%
+  add_model(imp_spec) %>%
+  fit(train) %>%
+  pull_workflow_fit() %>%
+  vip(aesthetics = list(alpha = 0.8, fill = "midnightblue"))
+
+```
+
+## SVM Model fitting
+
+SVM 모델을 적합하고 파라미터 튜닝을 실시했다.
+
+### Model fitting
+
+```{r}
+svm_spec <- svm_poly(cost = tune(), degree = 1) %>% 
+    set_engine('kernlab') %>% 
+    set_mode('regression')
+
+svm_wf <- workflow() %>% 
+                add_formula(actual~.) %>% 
+                add_model(svm_spec)
+
+library(tictoc)
+tic()
+
+set.seed(1234)
+svm_res <- tune_grid(
+    svm_wf,  
+    resamples = vb_folds, 
+    grid = 30,
+    metrics = metric_set(rmse), 
+    control = control_grid(save_pred = T)  
+)
+toc() # 10.5 sec
+
+best_param_svm <- select_best(svm_res) 
+final_svm <- finalize_workflow(svm_wf, best_param_svm)
+final_svm
+```
+
+### Model performance check
+
+모델 성능을 확인해보았다.
+
+```{r}
+final_svm_model <- finalize_model(svm_spec, best_param_svm) 
+
+final_svm_workflow <- svm_wf %>% update_model(final_svm_model)
+
+svm_fit <- fit(final_svm_workflow, data = train2)
+
+pred <- predict(svm_fit, test2 %>% select(-actual))
+actual <- test2$actual
+
+results <- tibble(pred, actual)
+
+metrics(results, truth = actual, estimate = .pred)
+```
+
+### Feature importance plot
+
+```{r}
+library(vip)
+
+imp_svm_spec <- svm_spec %>%
+  finalize_model(best_param_svm) %>%
+    set_engine('kernlab') 
+
+svm_fit %>% 
+    pull_workflow_fit() %>% 
+    vip(method = 'permute', target = "actual", metric = "rsquared",
+      pred_wrapper = kernlab::predict, train = train2)
+```
+
+## Support Vector Machine (SVM)
+
+1.  장점
+
+    -   범주나 수치 예측 문제에 대해 사용할 수 있음
+    -   노이즈 데이터에 영향을 크게 받지 않고 잘 과적합화되지 않음
+    -   특히 잘 지원되는 일부 SVM 알고리즘 때문에 신경망보다 사용하기 쉬움
+    -   높은 정확도와 높은 프로필로 데이터 마이닝 경쟁에서 우승해 인기를 얻음
+
+2.  단점
+
+    -   최적의 모델을 찾기 위해 커널과 모델에서 매개변수의 여러 가지 조합 테스트가 필요함
+
+    -   특히 입력 데이터셋이 예제 개수와 속성의 수가 많다면 훈련이 느릴 수 있음
+
+    -   해석하기 불가능하지 않지만, 어렵고 복잡한 블랙박스를 만듦
+
+## Random Forest (RF)
+
+1.  장점
+
+    -   범주나 수치 예측 문제에 대해 사용할 수 있음
+    -   결측치, 명목 속성, 수치를 처리할 수 있는 자동성 학습
+    -   다른 모델에 비해 상대적으로 높은 성능으로 BASELINE 모델로 많이 사용
+
+2.  단점
+
+    -   모델이 과적합되기 쉬움
+
+    -   하이퍼 파라미터가 많음
+
+    -   모델 학습속도가 느림
+
+## 두 모델 중에 어떤 모델이 좋은지 선택하고 설명하기
+
+
+
+## 선택한 모델의 한계점을 설명하고 한계점을 해결할 방법 설명하기
+
+
+
+
+참고자료
+
+<https://towardsdatascience.com/random-forest-in-python-24d0893d51c0>
+
+브레트 란츠 저, R을 활용한 기계학습

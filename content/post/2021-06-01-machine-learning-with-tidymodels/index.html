@@ -1,0 +1,542 @@
+---
+title: 'Machine learning with tidymodels '
+author: "dondon"
+date: '2021-06-01'
+slug: machine-learning-with-tidymodels
+categories: statistics
+tags: Machine learning
+---
+
+<script src="{{< blogdown/postref >}}index_files/header-attrs/header-attrs.js"></script>
+
+
+<div id="machine-learning-tutorial" class="section level1">
+<h1>Machine learning tutorial</h1>
+<p>adp 시험을 대비해서 대표적인 machine learning 모델 몇 가지를 골라서 tutorial 자료를 만들고자 한다. tidymodels 의 workflow는 패키지가 달라도 항상 동일하기 때문에 튜닝 파라미터를 제외하면 달라지는건 없는 것 같다. 시험이 3일 남았지만 이번 기회에 한번 정리를 해본다(ADP 관련 내용은 관련 후기 글을 보고 비슷하게 따라해본 내용이므로 참고만 하는 것이 좋다).</p>
+<div id="packages" class="section level2">
+<h2>packages</h2>
+</div>
+</div>
+<div id="시계열-온도-예측-모델" class="section level1">
+<h1>1. 시계열 온도 예측 모델</h1>
+<ul>
+<li><p>데이터 전처리 : 결측값 처리, 필요없는 칼럼 삭제, 데이터 전처리가 되었다는 증명, train/test 분리</p></li>
+<li><p>Random forest 모델 적합</p></li>
+<li><p>Random forest 예측 한계선을 설정하는 방법을 말하고 어떤 방법을 써야하는지 설명</p></li>
+<li><p>Random forest를 활용해 예측 및 검증, 파라미터 튜닝</p></li>
+<li><p>변수 중요도 시각화</p></li>
+<li><p>svm을 이용해 예측 및 검증, 파라미터 튜닝</p></li>
+<li><p>변수 중요도 시각화</p></li>
+<li><p>svm과 rf 장·단점 설명하기</p></li>
+<li><p>두 모델 중에 어떤 모델이 좋은지 선택하고 설명하기</p></li>
+<li><p>선택한 모델의 한계점을 설명하고 한계점을 해결할 방법 설명하기</p></li>
+</ul>
+<div id="data-description" class="section level2">
+<h2>Data description</h2>
+<ul>
+<li>temp_2 : 2일 전 최대 온도</li>
+<li>temp_1 : 1일 전 최대 온도</li>
+<li>average : 과거 평균 최대 온도</li>
+<li>actual : 실제 최대 온도</li>
+<li>friend : 친구의 예측값, random number</li>
+<li>기타 등등..</li>
+</ul>
+</div>
+<div id="data-preprocessing" class="section level2">
+<h2>Data preprocessing</h2>
+<div id="데이터-불러오기" class="section level3">
+<h3>데이터 불러오기</h3>
+<pre class="r"><code>dat &lt;- fread(&#39;temps.csv&#39;)
+head(dat)</code></pre>
+<pre><code>##    year month day week temp_2 temp_1 average actual forecast_noaa forecast_acc
+## 1: 2016     1   1  Fri     45     45    45.6     45            43           50
+## 2: 2016     1   2  Sat     44     45    45.7     44            41           50
+## 3: 2016     1   3  Sun     45     44    45.8     41            43           46
+## 4: 2016     1   4  Mon     44     41    45.9     40            44           48
+## 5: 2016     1   5 Tues     41     40    46.0     44            46           46
+## 6: 2016     1   6  Wed     40     44    46.1     51            43           49
+##    forecast_under friend
+## 1:             44     29
+## 2:             44     61
+## 3:             47     56
+## 4:             46     53
+## 5:             46     41
+## 6:             48     40</code></pre>
+</div>
+<div id="변수-속성-확인" class="section level3">
+<h3>변수 속성 확인</h3>
+<p>날짜 변수의 속성이 integer이므로 변환이 필요해보인다.</p>
+<pre class="r"><code>glimpse(dat)</code></pre>
+<pre><code>## Rows: 348
+## Columns: 12
+## $ year           &lt;int&gt; 2016, 2016, 2016, 2016, 2016, 2016, 2016, 2016, 2016, 2~
+## $ month          &lt;int&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1~
+## $ day            &lt;int&gt; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, ~
+## $ week           &lt;chr&gt; &quot;Fri&quot;, &quot;Sat&quot;, &quot;Sun&quot;, &quot;Mon&quot;, &quot;Tues&quot;, &quot;Wed&quot;, &quot;Thurs&quot;, &quot;Fr~
+## $ temp_2         &lt;int&gt; 45, 44, 45, 44, 41, 40, 44, 51, 45, 48, 50, 52, 45, 49,~
+## $ temp_1         &lt;int&gt; 45, 45, 44, 41, 40, 44, 51, 45, 48, 50, 52, 45, 49, 55,~
+## $ average        &lt;dbl&gt; 45.6, 45.7, 45.8, 45.9, 46.0, 46.1, 46.2, 46.3, 46.4, 4~
+## $ actual         &lt;int&gt; 45, 44, 41, 40, 44, 51, 45, 48, 50, 52, 45, 49, 55, 49,~
+## $ forecast_noaa  &lt;int&gt; 43, 41, 43, 44, 46, 43, 45, 43, 46, 45, 42, 44, 45, 43,~
+## $ forecast_acc   &lt;int&gt; 50, 50, 46, 48, 46, 49, 49, 47, 50, 48, 48, 50, 51, 47,~
+## $ forecast_under &lt;int&gt; 44, 44, 47, 46, 46, 48, 46, 46, 45, 48, 48, 45, 46, 46,~
+## $ friend         &lt;int&gt; 29, 61, 56, 53, 41, 40, 38, 34, 47, 49, 39, 61, 33, 58,~</code></pre>
+</div>
+<div id="변수-삭제-날짜-변수-처리" class="section level3">
+<h3>변수 삭제, 날짜 변수 처리</h3>
+<p>year, month, day를 하나로 묶어서 date라는 파생변수를 만들었다. 파생 변수를 만들지 않고, 날짜 변수 각각을 lubridate로 처리하려고 하면 골치아프다. 파생변수 date를 이용해서 date를 다시 만들고, year 변수의 경우 2016년만 있기 때문에 제외했다. week 변수의 경우 factor로 변경했다.</p>
+<pre class="r"><code>dat %&gt;% select(-starts_with(&#39;forecast_&#39;), -friend) %&gt;% 
+                mutate(date = paste0(year, &#39;-&#39;, month, &#39;-&#39;, day)) %&gt;% 
+                select(-c(year, month, day, week)) %&gt;% 
+                mutate(date = ymd(date), 
+                       year = year(date), 
+                       month = month(date), 
+                       day = day(date), 
+                       week = weekdays(date)) %&gt;% 
+                select(-c(date, year)) %&gt;% 
+                select(month, week, day, everything()) %&gt;% 
+                mutate(week = as.factor(week)) -&gt; dat
+                
+glimpse(dat)                </code></pre>
+<pre><code>## Rows: 348
+## Columns: 7
+## $ month   &lt;int&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,~
+## $ week    &lt;fct&gt; 금요일, 토요일, 일요일, 월요일, 화요일, 수요일, 목요일, 금요일~
+## $ day     &lt;int&gt; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,~
+## $ temp_2  &lt;int&gt; 45, 44, 45, 44, 41, 40, 44, 51, 45, 48, 50, 52, 45, 49, 55, 49~
+## $ temp_1  &lt;int&gt; 45, 45, 44, 41, 40, 44, 51, 45, 48, 50, 52, 45, 49, 55, 49, 48~
+## $ average &lt;dbl&gt; 45.6, 45.7, 45.8, 45.9, 46.0, 46.1, 46.2, 46.3, 46.4, 46.5, 46~
+## $ actual  &lt;int&gt; 45, 44, 41, 40, 44, 51, 45, 48, 50, 52, 45, 49, 55, 49, 48, 54~</code></pre>
+<pre class="r"><code>summary(dat)</code></pre>
+<pre><code>##      month            week         day            temp_2           temp_1     
+##  Min.   : 1.000   금요일:50   Min.   : 1.00   Min.   : 35.00   Min.   : 35.0  
+##  1st Qu.: 3.000   목요일:49   1st Qu.: 8.00   1st Qu.: 54.00   1st Qu.: 54.0  
+##  Median : 6.000   수요일:49   Median :15.00   Median : 62.50   Median : 62.5  
+##  Mean   : 6.477   월요일:49   Mean   :15.51   Mean   : 62.65   Mean   : 62.7  
+##  3rd Qu.:10.000   일요일:49   3rd Qu.:23.00   3rd Qu.: 71.00   3rd Qu.: 71.0  
+##  Max.   :12.000   토요일:50   Max.   :31.00   Max.   :117.00   Max.   :117.0  
+##                   화요일:52                                                   
+##     average          actual     
+##  Min.   :45.10   Min.   :35.00  
+##  1st Qu.:49.98   1st Qu.:54.00  
+##  Median :58.20   Median :62.50  
+##  Mean   :59.76   Mean   :62.54  
+##  3rd Qu.:69.03   3rd Qu.:71.00  
+##  Max.   :77.40   Max.   :92.00  
+## </code></pre>
+</div>
+<div id="결측치-확인" class="section level3">
+<h3>결측치 확인</h3>
+<p>n_missing을 보면 결측치는 존재하지 않는 것으로 확인된다.</p>
+<pre class="r"><code>skimr::skim(dat)</code></pre>
+<table>
+<caption><span id="tab:unnamed-chunk-5">Table 1: </span>Data summary</caption>
+<tbody>
+<tr class="odd">
+<td align="left">Name</td>
+<td align="left">dat</td>
+</tr>
+<tr class="even">
+<td align="left">Number of rows</td>
+<td align="left">348</td>
+</tr>
+<tr class="odd">
+<td align="left">Number of columns</td>
+<td align="left">7</td>
+</tr>
+<tr class="even">
+<td align="left">Key</td>
+<td align="left">NULL</td>
+</tr>
+<tr class="odd">
+<td align="left">_______________________</td>
+<td align="left"></td>
+</tr>
+<tr class="even">
+<td align="left">Column type frequency:</td>
+<td align="left"></td>
+</tr>
+<tr class="odd">
+<td align="left">factor</td>
+<td align="left">1</td>
+</tr>
+<tr class="even">
+<td align="left">numeric</td>
+<td align="left">6</td>
+</tr>
+<tr class="odd">
+<td align="left">________________________</td>
+<td align="left"></td>
+</tr>
+<tr class="even">
+<td align="left">Group variables</td>
+<td align="left">None</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Variable type: factor</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">skim_variable</th>
+<th align="right">n_missing</th>
+<th align="right">complete_rate</th>
+<th align="left">ordered</th>
+<th align="right">n_unique</th>
+<th align="left">top_counts</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">week</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="left">FALSE</td>
+<td align="right">7</td>
+<td align="left">화요일: 52, 금요일: 50, 토요일: 50, 목요일: 49</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Variable type: numeric</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">skim_variable</th>
+<th align="right">n_missing</th>
+<th align="right">complete_rate</th>
+<th align="right">mean</th>
+<th align="right">sd</th>
+<th align="right">p0</th>
+<th align="right">p25</th>
+<th align="right">p50</th>
+<th align="right">p75</th>
+<th align="right">p100</th>
+<th align="left">hist</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">month</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">6.48</td>
+<td align="right">3.50</td>
+<td align="right">1.0</td>
+<td align="right">3.00</td>
+<td align="right">6.0</td>
+<td align="right">10.00</td>
+<td align="right">12.0</td>
+<td align="left">▇▆▆▅▇</td>
+</tr>
+<tr class="even">
+<td align="left">day</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">15.51</td>
+<td align="right">8.77</td>
+<td align="right">1.0</td>
+<td align="right">8.00</td>
+<td align="right">15.0</td>
+<td align="right">23.00</td>
+<td align="right">31.0</td>
+<td align="left">▇▇▆▆▆</td>
+</tr>
+<tr class="odd">
+<td align="left">temp_2</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">62.65</td>
+<td align="right">12.17</td>
+<td align="right">35.0</td>
+<td align="right">54.00</td>
+<td align="right">62.5</td>
+<td align="right">71.00</td>
+<td align="right">117.0</td>
+<td align="left">▃▇▆▁▁</td>
+</tr>
+<tr class="even">
+<td align="left">temp_1</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">62.70</td>
+<td align="right">12.12</td>
+<td align="right">35.0</td>
+<td align="right">54.00</td>
+<td align="right">62.5</td>
+<td align="right">71.00</td>
+<td align="right">117.0</td>
+<td align="left">▃▇▆▁▁</td>
+</tr>
+<tr class="odd">
+<td align="left">average</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">59.76</td>
+<td align="right">10.53</td>
+<td align="right">45.1</td>
+<td align="right">49.98</td>
+<td align="right">58.2</td>
+<td align="right">69.03</td>
+<td align="right">77.4</td>
+<td align="left">▇▅▃▅▆</td>
+</tr>
+<tr class="even">
+<td align="left">actual</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">62.54</td>
+<td align="right">11.79</td>
+<td align="right">35.0</td>
+<td align="right">54.00</td>
+<td align="right">62.5</td>
+<td align="right">71.00</td>
+<td align="right">92.0</td>
+<td align="left">▂▆▇▅▂</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>dat %&gt;% is.na() %&gt;% colSums()</code></pre>
+<pre><code>##   month    week     day  temp_2  temp_1 average  actual 
+##       0       0       0       0       0       0       0</code></pre>
+</div>
+<div id="traintest-split" class="section level3">
+<h3>train/test split</h3>
+<p>train/test를 7:3 비율로 나눠주었다.</p>
+<pre class="r"><code>set.seed(123)
+splits &lt;- initial_split(dat, prop = 0.7, strata = actual)
+train &lt;- training(splits)
+test &lt;- testing(splits)</code></pre>
+</div>
+</div>
+<div id="random-forest-model-fitting" class="section level2">
+<h2>Random forest Model fitting</h2>
+<div id="recipe" class="section level3">
+<h3>Recipe</h3>
+<p>week 변수를 one-hot encoding 으로 변환해주었다.</p>
+<pre class="r"><code>model_rec &lt;- train %&gt;% recipe(actual~.) %&gt;% 
+                step_dummy(week, one_hot = T) 
+
+train2 &lt;- model_rec %&gt;% prep() %&gt;% juice()
+test2 &lt;- model_rec %&gt;% prep() %&gt;% bake(new_data = test)</code></pre>
+</div>
+<div id="create-cv" class="section level3">
+<h3>create cv</h3>
+<p>모델 평가를 위해서 validation set을 생성해주었다.</p>
+<pre class="r"><code>set.seed(123)
+vb_folds &lt;- vfold_cv(train2, v = 3, strata = actual)</code></pre>
+</div>
+<div id="model-fitting" class="section level3">
+<h3>Model fitting</h3>
+<p>random forest를 적합시키고 파라미터 튜닝을 실시했다.</p>
+<pre class="r"><code>rf_spec &lt;- rand_forest(
+                mtry = tune(), 
+                trees = 100) %&gt;% 
+                set_mode(&#39;regression&#39;) %&gt;% 
+                set_engine(&#39;ranger&#39;)
+
+rf_wf &lt;- workflow() %&gt;% 
+                add_formula(actual~.) %&gt;% 
+                add_model(rf_spec)
+
+library(tictoc)
+tic()
+
+
+set.seed(1234)
+rf_res &lt;- tune_grid(
+    rf_wf,  
+    resamples = vb_folds, 
+    grid = 30,
+    metrics = metric_set(rmse), 
+    control = control_grid(save_pred = T)  
+)</code></pre>
+<pre><code>## i Creating pre-processing data to finalize unknown parameter: mtry</code></pre>
+<pre class="r"><code>toc() # 10.5 sec</code></pre>
+<pre><code>## 8.35 sec elapsed</code></pre>
+<pre class="r"><code>best_param_rf &lt;- select_best(rf_res) 
+final_rf &lt;- finalize_workflow(rf_wf, best_param_rf)
+final_rf</code></pre>
+<pre><code>## == Workflow ====================================================================
+## Preprocessor: Formula
+## Model: rand_forest()
+## 
+## -- Preprocessor ----------------------------------------------------------------
+## actual ~ .
+## 
+## -- Model -----------------------------------------------------------------------
+## Random Forest Model Specification (regression)
+## 
+## Main Arguments:
+##   mtry = 4
+##   trees = 100
+## 
+## Computational engine: ranger</code></pre>
+</div>
+<div id="model-performance-check" class="section level3">
+<h3>Model performance check</h3>
+<p>모델 성능을 확인해보았다.</p>
+<pre class="r"><code>final_rf_model &lt;- finalize_model(rf_spec, best_param_rf) 
+final_rf_workflow &lt;- rf_wf %&gt;% update_model(final_rf_model)
+rf_fit &lt;- fit(final_rf_workflow, data = train2)
+
+pred &lt;- predict(rf_fit, test2 %&gt;% select(-actual))
+actual &lt;- test2$actual
+
+results &lt;- tibble(pred, actual)
+
+metrics(results, truth = actual, estimate = .pred)</code></pre>
+<pre><code>## # A tibble: 3 x 3
+##   .metric .estimator .estimate
+##   &lt;chr&gt;   &lt;chr&gt;          &lt;dbl&gt;
+## 1 rmse    standard       4.94 
+## 2 rsq     standard       0.828
+## 3 mae     standard       3.84</code></pre>
+</div>
+<div id="feature-importance-plot" class="section level3">
+<h3>Feature importance plot</h3>
+<pre class="r"><code>library(vip)</code></pre>
+<pre><code>## 
+## 다음의 패키지를 부착합니다: &#39;vip&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:utils&#39;:
+## 
+##     vi</code></pre>
+<pre class="r"><code>imp_spec &lt;- rf_spec %&gt;%
+  finalize_model(best_param_rf) %&gt;%
+  set_engine(&quot;ranger&quot;, importance = &quot;permutation&quot;)
+
+workflow() %&gt;%
+  add_recipe(model_rec) %&gt;%
+  add_model(imp_spec) %&gt;%
+  fit(train) %&gt;%
+  pull_workflow_fit() %&gt;%
+  vip(aesthetics = list(alpha = 0.8, fill = &quot;midnightblue&quot;))</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+</div>
+</div>
+<div id="svm-model-fitting" class="section level2">
+<h2>SVM Model fitting</h2>
+<p>SVM 모델을 적합하고 파라미터 튜닝을 실시했다.</p>
+<div id="model-fitting-1" class="section level3">
+<h3>Model fitting</h3>
+<pre class="r"><code>svm_spec &lt;- svm_poly(cost = tune(), degree = 1) %&gt;% 
+    set_engine(&#39;kernlab&#39;) %&gt;% 
+    set_mode(&#39;regression&#39;)
+
+svm_wf &lt;- workflow() %&gt;% 
+                add_formula(actual~.) %&gt;% 
+                add_model(svm_spec)
+
+library(tictoc)
+tic()
+
+set.seed(1234)
+svm_res &lt;- tune_grid(
+    svm_wf,  
+    resamples = vb_folds, 
+    grid = 30,
+    metrics = metric_set(rmse), 
+    control = control_grid(save_pred = T)  
+)
+toc() # 10.5 sec</code></pre>
+<pre><code>## 23.75 sec elapsed</code></pre>
+<pre class="r"><code>best_param_svm &lt;- select_best(svm_res) 
+final_svm &lt;- finalize_workflow(svm_wf, best_param_svm)
+final_svm</code></pre>
+<pre><code>## == Workflow ====================================================================
+## Preprocessor: Formula
+## Model: svm_poly()
+## 
+## -- Preprocessor ----------------------------------------------------------------
+## actual ~ .
+## 
+## -- Model -----------------------------------------------------------------------
+## Polynomial Support Vector Machine Specification (regression)
+## 
+## Main Arguments:
+##   cost = 0.639348902476866
+##   degree = 1
+## 
+## Computational engine: kernlab</code></pre>
+</div>
+<div id="model-performance-check-1" class="section level3">
+<h3>Model performance check</h3>
+<p>모델 성능을 확인해보았다.</p>
+<pre class="r"><code>final_svm_model &lt;- finalize_model(svm_spec, best_param_svm) 
+
+final_svm_workflow &lt;- svm_wf %&gt;% update_model(final_svm_model)
+
+svm_fit &lt;- fit(final_svm_workflow, data = train2)
+
+pred &lt;- predict(svm_fit, test2 %&gt;% select(-actual))
+actual &lt;- test2$actual
+
+results &lt;- tibble(pred, actual)
+
+metrics(results, truth = actual, estimate = .pred)</code></pre>
+<pre><code>## # A tibble: 3 x 3
+##   .metric .estimator .estimate
+##   &lt;chr&gt;   &lt;chr&gt;          &lt;dbl&gt;
+## 1 rmse    standard       5.82 
+## 2 rsq     standard       0.757
+## 3 mae     standard       4.04</code></pre>
+</div>
+<div id="feature-importance-plot-1" class="section level3">
+<h3>Feature importance plot</h3>
+<pre class="r"><code>library(vip)
+
+imp_svm_spec &lt;- svm_spec %&gt;%
+  finalize_model(best_param_svm) %&gt;%
+    set_engine(&#39;kernlab&#39;) 
+
+svm_fit %&gt;% 
+    pull_workflow_fit() %&gt;% 
+    vip(method = &#39;permute&#39;, target = &quot;actual&quot;, metric = &quot;rsquared&quot;,
+      pred_wrapper = kernlab::predict, train = train2)</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+</div>
+</div>
+<div id="support-vector-machine-svm" class="section level2">
+<h2>Support Vector Machine (SVM)</h2>
+<ol style="list-style-type: decimal">
+<li><p>장점</p>
+<ul>
+<li>범주나 수치 예측 문제에 대해 사용할 수 있음</li>
+<li>노이즈 데이터에 영향을 크게 받지 않고 잘 과적합화되지 않음</li>
+<li>특히 잘 지원되는 일부 SVM 알고리즘 때문에 신경망보다 사용하기 쉬움</li>
+<li>높은 정확도와 높은 프로필로 데이터 마이닝 경쟁에서 우승해 인기를 얻음</li>
+</ul></li>
+<li><p>단점</p>
+<ul>
+<li><p>최적의 모델을 찾기 위해 커널과 모델에서 매개변수의 여러 가지 조합 테스트가 필요함</p></li>
+<li><p>특히 입력 데이터셋이 예제 개수와 속성의 수가 많다면 훈련이 느릴 수 있음</p></li>
+<li><p>해석하기 불가능하지 않지만, 어렵고 복잡한 블랙박스를 만듦</p></li>
+</ul></li>
+</ol>
+</div>
+<div id="random-forest-rf" class="section level2">
+<h2>Random Forest (RF)</h2>
+<ol style="list-style-type: decimal">
+<li><p>장점</p>
+<ul>
+<li>범주나 수치 예측 문제에 대해 사용할 수 있음</li>
+<li>결측치, 명목 속성, 수치를 처리할 수 있는 자동성 학습</li>
+<li>다른 모델에 비해 상대적으로 높은 성능으로 BASELINE 모델로 많이 사용</li>
+</ul></li>
+<li><p>단점</p>
+<ul>
+<li><p>모델이 과적합되기 쉬움</p></li>
+<li><p>하이퍼 파라미터가 많음</p></li>
+<li><p>모델 학습속도가 느림</p></li>
+</ul></li>
+</ol>
+</div>
+<div id="두-모델-중에-어떤-모델이-좋은지-선택하고-설명하기" class="section level2">
+<h2>두 모델 중에 어떤 모델이 좋은지 선택하고 설명하기</h2>
+</div>
+<div id="선택한-모델의-한계점을-설명하고-한계점을-해결할-방법-설명하기" class="section level2">
+<h2>선택한 모델의 한계점을 설명하고 한계점을 해결할 방법 설명하기</h2>
+<p>참고자료</p>
+<p><a href="https://towardsdatascience.com/random-forest-in-python-24d0893d51c0" class="uri">https://towardsdatascience.com/random-forest-in-python-24d0893d51c0</a></p>
+<p>브레트 란츠 저, R을 활용한 기계학습</p>
+</div>
+</div>
