@@ -352,7 +352,7 @@ rf_res &lt;- tune_grid(
 )</code></pre>
 <pre><code>## i Creating pre-processing data to finalize unknown parameter: mtry</code></pre>
 <pre class="r"><code>toc() # 10.5 sec</code></pre>
-<pre><code>## 8.35 sec elapsed</code></pre>
+<pre><code>## 8.45 sec elapsed</code></pre>
 <pre class="r"><code>best_param_rf &lt;- select_best(rf_res) 
 final_rf &lt;- finalize_workflow(rf_wf, best_param_rf)
 final_rf</code></pre>
@@ -438,7 +438,7 @@ svm_res &lt;- tune_grid(
     control = control_grid(save_pred = T)  
 )
 toc() # 10.5 sec</code></pre>
-<pre><code>## 23.75 sec elapsed</code></pre>
+<pre><code>## 23.53 sec elapsed</code></pre>
 <pre class="r"><code>best_param_svm &lt;- select_best(svm_res) 
 final_svm &lt;- finalize_workflow(svm_wf, best_param_svm)
 final_svm</code></pre>
@@ -507,9 +507,9 @@ svm_fit %&gt;%
 </ul></li>
 <li><p>단점</p>
 <ul>
-<li><p>최적의 모델을 찾기 위해 커널과 모델에서 매개변수의 여러 가지 조합 테스트가 필요함</p></li>
-<li><p>특히 입력 데이터셋이 예제 개수와 속성의 수가 많다면 훈련이 느릴 수 있음</p></li>
-<li><p>해석하기 불가능하지 않지만, 어렵고 복잡한 블랙박스를 만듦</p></li>
+<li>최적의 모델을 찾기 위해 커널과 모델에서 매개변수의 여러 가지 조합 테스트가 필요함</li>
+<li>특히 입력 데이터셋이 예제 개수와 속성의 수가 많다면 훈련이 느릴 수 있음</li>
+<li>해석하기 불가능하지 않지만, 어렵고 복잡한 블랙박스를 만듦</li>
 </ul></li>
 </ol>
 </div>
@@ -524,9 +524,9 @@ svm_fit %&gt;%
 </ul></li>
 <li><p>단점</p>
 <ul>
-<li><p>모델이 과적합되기 쉬움</p></li>
-<li><p>하이퍼 파라미터가 많음</p></li>
-<li><p>모델 학습속도가 느림</p></li>
+<li>모델이 과적합되기 쉬움</li>
+<li>하이퍼 파라미터가 많음</li>
+<li>모델 학습속도가 느림</li>
 </ul></li>
 </ol>
 </div>
