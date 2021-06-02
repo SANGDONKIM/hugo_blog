@@ -274,6 +274,193 @@ svm_fit %>%
       pred_wrapper = kernlab::predict, train = train2)
 ```
 
+# 추가 모델 fitting
+
+-   LASSO
+
+-   Ridge
+
+-   Elastic Net
+
+-   Decision Tree
+
+```{r}
+library(stacks)
+# stacks 
+ctrl_grid <- control_stack_grid()
+
+# LASSO 
+lasso_spec <- linear_reg(penalty = tune(), mixture = 1) %>% # mixture = 1 : LASSO, 0 : ridge 
+  set_engine("glmnet")
+
+# Ridge 
+ridge_spec <- linear_reg(penalty = tune(), mixture = 0) %>% # mixture = 1 : LASSO, 0 : ridge 
+  set_engine("glmnet")
+
+# elastic net 
+elastic_spec <- linear_reg(penalty = tune(), mixture = tune()) %>%  
+  set_engine("glmnet")
+
+
+# Decision tree 
+tree_spec <- decision_tree(
+  cost_complexity = tune(),
+  tree_depth = tune(),
+  min_n = tune()
+) %>%
+  set_engine("rpart") %>%
+  set_mode("regression")
+```
+```{r}
+
+lasso_wf <- workflow() %>% 
+    add_formula(actual ~.) %>% 
+    add_model(lasso_spec)
+
+ridge_wf <- workflow() %>% 
+    add_formula(actual ~.) %>% 
+    add_model(ridge_spec)
+
+elastic_wf <- workflow() %>% 
+    add_formula(actual ~.) %>% 
+    add_model(elastic_spec)
+
+tree_wf <- workflow() %>% 
+    add_formula(actual ~.) %>% 
+    add_model(tree_spec)
+```
+
+```{r}
+
+lambda_grid <- grid_regular(penalty(), levels = 10)
+elastic_grid <- grid_regular(penalty(), mixture(), levels = 10)
+tree_grid <- grid_regular(cost_complexity(), tree_depth(), min_n(), levels = 4)
+
+
+lasso_res <- tune_grid(
+    lasso_wf, 
+    resamples = vb_folds, 
+    grid = lambda_grid, 
+    control = ctrl_grid, 
+)
+
+ridge_res <- tune_grid(
+    ridge_wf, 
+    resamples = vb_folds, 
+    grid = lambda_grid, 
+    control = ctrl_grid, 
+)
+
+elastic_res <- tune_grid(
+    elastic_wf, 
+    resamples = vb_folds, 
+    grid = elastic_grid, 
+    control = ctrl_grid, 
+)
+
+tree_res <- tune_grid(
+  tree_wf, 
+  resamples = vb_folds, 
+  grid = tree_grid, 
+  control = ctrl_grid, 
+)
+```
+
+
+### trace plot 
+```{r}
+lasso_res %>% 
+    collect_metrics() %>% 
+    ggplot(aes(penalty, mean, color = .metric)) + # .metric : rmse 
+    geom_errorbar(aes(ymin = mean - std_err, ymax = mean + std_err), alpha = 0.5) + 
+    geom_line(size = 1.5, show.legend = F) + 
+    facet_wrap(~.metric, scales = 'free', nrow = 2)
+```
+
+
+```{r}
+best_param_lasso <- select_best(lasso_res, 'rmse')
+final_lasso <- finalize_workflow(lasso_wf, best_param_lasso)
+lasso_fit <- fit(final_lasso, data = training(splits))
+
+best_param_ridge <- select_best(ridge_res, 'rmse')
+final_ridge <- finalize_workflow(ridge_wf, best_param_ridge)
+ridge_fit <- fit(final_ridge, data = training(splits))
+
+best_param_elastic <- select_best(elastic_res, 'rmse')
+final_elastic <- finalize_workflow(elastic_wf, best_param_elastic)
+elastic_fit <- fit(final_elastic, data = training(splits))
+
+best_param_tree <- select_best(tree_res, 'rmse')
+final_tree <- finalize_workflow(tree_wf, best_param_tree)
+tree_fit <- fit(final_tree, data = training(splits))
+
+```
+
+
+```{r}
+pred_lasso <- 
+    predict(lasso_fit, testing(splits)) %>% 
+    mutate(modelo = "LASSO")
+
+pred_ridge <- 
+    predict(ridge_fit, testing(splits)) %>% 
+    mutate(modelo = "RIDGE")
+
+pred_elastic <- 
+    predict(elastic_fit, testing(splits)) %>% 
+    mutate(modelo = "ELASTIC")
+
+pred_tree <- 
+    predict(tree_fit, testing(splits)) %>% 
+    mutate(modelo = "TREE")
+```
+
+```{r}
+library(caret)
+
+print(RMSE(pred_lasso$.pred, testing(splits)$actual))
+print(RMSE(pred_ridge$.pred, testing(splits)$actual))
+print(RMSE(pred_elastic$.pred, testing(splits)$actual))
+print(RMSE(pred_tree$.pred, testing(splits)$actual))
+
+```
+
+```{r}
+library(vip)
+
+tree_fit %>%
+  pull_workflow_fit() %>% 
+  vip(geom = 'col') # geom = 'point'
+```
+
+## stacking with tidymodels
+
+```{r}
+stacking_model <- 
+  # initialize the stack
+  stacks() %>%
+  # add candidate members
+  add_candidates(lasso_res) %>%
+  add_candidates(ridge_res) %>%
+  add_candidates(elastic_res) %>%
+  add_candidates(tree_res) %>%
+
+  # determine how to combine their predictions
+  blend_predictions() %>%
+  # fit the candidates with nonzero stacking coefficients
+  fit_members()
+
+
+stacking_pred <-
+  test2 %>%
+  bind_cols(predict(stacking_model, .))
+
+
+print(RMSE(stacking_pred$.pred, testing(splits)$actual))
+
+```
+
 ## Support Vector Machine (SVM)
 
 1.  장점
@@ -305,15 +492,172 @@ svm_fit %>%
 
 ## 두 모델 중에 어떤 모델이 좋은지 선택하고 설명하기
 
-
+-   Random Forest, SVM 모델의 평가지표를 비교해보면 RMSE, RSQ, MAE 기준으로 Random Forest 모델을 최적 모형으로 선택함
 
 ## 선택한 모델의 한계점을 설명하고 한계점을 해결할 방법 설명하기
 
+-   Random Forest 모델의 경우 하이퍼 파라미터가 너무 많고, 모델 특성상 계산 시간이 오래걸림
+
+-   모델 성능 개선이 힘듦
+
+-   모델 성능 개선을 위해 스태킹 앙상블 모형 고려
+
+-   xgboost, lightgbm 등 다른 tree 모형 고려
+
+# tidymodels 설치 안될 경우.. (제발 설치되라..)
+
+진흥원 제공 패키지 목록
+
+-   caret : 머신러닝 전반에 대한 패키지
+-   rsample : initial_split, vfold_cv
+-   recipes : 전처리 함수
+-   ranger : random forest 관련 패키지
+-   e1071 : svm 관련 패키지
+
+## 변수 중요도 그림
+
+```{r}
+rf_model <- ranger::ranger(actual~., data = training(splits), importance = 'permutation')
+ranger::importance(rf_model) %>% 
+  enframe('Variable', 'Importance') %>% 
+  mutate(Variable = fct_reorder(Variable, Importance)) %>% 
+    arrange(desc(Importance)) %>% 
+    ggplot(aes(x = Variable, y = Importance)) +
+    geom_col() +
+    coord_flip() +
+    scale_fill_viridis_d(end = .7) +
+    labs(title = "Variable Importance", subtitle = "Original Variables")
+
+```
+
+## Caret을 이용한 모형 적합
+
+```{r}
+library(caret)
+
+set.seed(1234)
+
+train_index <- createDataPartition(dat$actual, p = 0.7, list = F)
+train <- dat[train_index, ]
+test <- dat[-train_index, ]
 
 
+# Random Forest 
+control <- trainControl(method='repeatedcv', 
+                        number=5, 
+                        repeats=3, 
+                        search='grid')
 
-참고자료
+tunegrid <- expand.grid(.mtry = (1:5))
+rf_gridsearch <- train(actual ~ ., 
+                       data = train,
+                       method = 'rf',
+                       metric = 'RMSE',
+                       tuneGrid = tunegrid)
+
+plot(varImp(rf_gridsearch, scale = F))
+
+predict(rf_gridsearch, newdata = test)
+print(RMSE(predict(rf_gridsearch, newdata = test), test$actual))
+
+
+# svm 
+
+modelLookup('svmPoly')
+modelLookup('svmRadial')
+
+
+control <- trainControl(method='repeatedcv', 
+                        number=5, 
+                        repeats=3, 
+                        search='grid')
+
+svm_gridsearch <- train(actual ~ ., 
+                       data = train,
+                       method = 'svmRadial',
+                       #preProcess = c("center","scale"), 
+                       tuneLength = 10, 
+                       metric = 'RMSE')
+
+plot(varImp(svm_gridsearch, scale = F))
+
+
+# lm
+
+set.seed(123)
+lambda <- 10^seq(-3, 3, length = 100)
+
+ridge_caret <- train(actual ~ ., 
+                     data = train, 
+                     method = 'glmnet', 
+                     trControl = trainControl('cv', number = 5), 
+                     tuneGrid = expand.grid(alpha = 0, lambda = lambda))
+
+coef(ridge_caret$finalModel, ridge_caret$bestTune$lambda)
+RMSE(ridge_caret %>% predict(test), test$actual)
+
+lasso_caret <- train(actual ~ ., 
+                     data = train, 
+                     method = 'glmnet', 
+                     trControl = trainControl('cv', number = 5), 
+                     tuneGrid = expand.grid(alpha = 1, lambda = lambda))
+
+coef(ridge_caret$finalModel, ridge_caret$bestTune$lambda)
+RMSE(ridge_caret %>% predict(test), test$actual)
+
+
+elastic_caret <- train(actual ~ ., 
+                     data = train, 
+                     method = 'glmnet', 
+                     trControl = trainControl('cv', number = 5),
+                     tuneLength = 10)
+
+coef(elastic_caret$finalModel, elastic_caret$bestTune$lambda)
+RMSE(elastic_caret %>% predict(test), test$actual)
+
+```
+
+## stacking ensemble
+
+```{r}
+library(caretEnsemble)
+stackControl <- trainControl(method="repeatedcv", number=5, repeats=2, savePredictions=TRUE) # sampling = "none", "down", "up", "smote", or "rose"
+
+set.seed(123)
+stack_models <- caretList(actual~., 
+                          data = train, 
+                          trControl = stackControl, 
+                          methodList = c('glmnet', 'rf', 'rpart'))
+
+summary(resamples(stack_models))
+
+stack.gbm <- caretStack(stack_models, method="gbm", metric='RMSE', trControl=stackControl)
+stack.glm <- caretStack(stack_models, method="glm", metric='RMSE', trControl=stackControl)
+
+pred_stack_gbm <- predict(stack.gbm, newdata=test)
+pred_stack_glm <- predict(stack.glm, newdata=test)
+
+RMSE(pred_stack_gbm, test$actual)
+RMSE(pred_stack_glm, test$actual)
+
+```
+
+# 참고자료
 
 <https://towardsdatascience.com/random-forest-in-python-24d0893d51c0>
+
+<https://cran.r-project.org/web/packages/stacks/vignettes/classification.html>
+
+<https://github.com/tidymodels/stacks>
+
+<https://juliasilge.com/blog/wind-turbine/>
+
+<https://dzone.com/articles/build-custom-ensemble-models-using-caret-in-r>
+
+<https://cran.r-project.org/web/packages/caretEnsemble/vignettes/caretEnsemble-intro.html>
+
+<https://rpubs.com/uky994/593668>
+
+<https://topepo.github.io/caret/train-models-by-tag.html#linear-regression>
 
 브레트 란츠 저, R을 활용한 기계학습
