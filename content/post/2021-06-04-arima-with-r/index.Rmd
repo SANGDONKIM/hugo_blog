@@ -1,0 +1,483 @@
+---
+title: 'ARIMA, Seasonal ARIMA, time series regression with R '
+author: 'dondon '
+date: '2021-06-04'
+slug: arima-with-r
+categories:
+- R
+- statistics
+tags: statistics
+---
+
+# package
+
+```{r}
+library(tidyverse)
+library(data.table)
+library(forecast)
+```
+
+# ARIMA
+
+비정상 시계열, 차분 필요
+
+```{r}
+female <- scan('female.txt')
+female.ts <- ts(female)
+
+ggtsdisplay(female.ts)
+```
+
+## 일반 차분
+
+-   white noise 만족
+-   p = 0, q = 0
+
+```{r}
+ndiffs(female)
+female_d <- diff(female.ts)
+ggtsdisplay(female_d)
+```
+
+## Model fitting
+
+```{r}
+fit <- Arima(female, order = c(0, 1, 0), include.drift = T)
+checkresiduals(fit)
+```
+
+### 과대적합
+
+```{r}
+confint(Arima(female, order = c(1, 1, 0), include.drift = T)) # 추가된 모수 비유의 
+confint(Arima(female, order = c(0, 1, 1), include.drift = T)) # 추가된 모수 비유의 
+
+# ARIMA(0, 1, 0) 확정 
+```
+
+## Auto.arima
+
+```{r}
+auto.arima(female, stepwise = F)
+auto.arima(female, ic = 'bic', stepwise = F)
+
+```
+
+## 예측
+
+### 원자료에 대한 예측
+
+```{r}
+fit <- Arima(female, order = c(0, 1, 0), include.drift = T)
+plot(forecast(fit))
+summary(forecast(fit))
+```
+
+# Seasonal ARIMA Model
+
+# Load data
+
+```{r}
+tour <- scan('tourist.txt')
+tour.ts <- ts(tour, start = 1981, frequency = 12)
+```
+
+## time series plot
+
+정상성 확인 2가지
+
+-   동일분산 확인
+-   추세 확인
+
+### 동일 분산 확인
+
+분산 증가, 로그 변환 필요
+
+```{r}
+plot(tour.ts)
+```
+
+### 분산 안정화 변환
+
+```{r}
+lntour <- log(tour.ts)
+plot(lntour)
+ggseasonplot(lntour)
+```
+
+### 추세 확인
+
+일반 차분, 계절 차분 필요
+
+```{r}
+Acf(lntour, lag.max = 48)
+ndiffs(lntour)
+nsdiffs(lntour)
+```
+
+### d = 1일 때 (일반 차분)
+
+추가적으로 계절 차분 필요
+
+```{r}
+tour_1 <- diff(lntour)
+ggtsdisplay(tour_1, lag.max = 48)
+```
+
+### D = 1일 때
+
+추가적인 일반 차분이 필요해보임
+
+```{r}
+tour_12 <- diff(lntour, lag = 12)
+ggtsdisplay(tour_12, lag.max = 48)
+ndiffs(tour_12)
+```
+
+### d = 1, D = 1일 때
+
+d = 1, D = 1로 결정
+
+```{r}
+tour_1_12 <- diff(tour_1, lag = 12)
+ggtsdisplay(tour_1_12, lag.max = 48)
+```
+
+## Model fitting
+
+```{r}
+Acf(tour_1_12, lag.max = 48)
+Pacf(tour_1_12, lag.max = 48)
+```
+
+비계절형 요소
+
+-   ACF 절단, PACF 감소 : p = 0, q = 1
+-   ACF 감소, PACF 절단 : p = 2, q = 0
+
+계절형 확인 방법
+
+$AR(1)_{12}$
+
+-   ACF : 계절주기 12의 배수에 해당하는 시차에 따라 지수적으로 감소
+-   PACF : 시차 12에서만 값을 갖고 그 이외의 사차에서는 0
+
+$MA(1)_{12}$
+
+-   ACF : 시차 12에서만 값을 갖고 그 이외의 사차에서는 0
+-   PACF : 계절주기 12의 배수에 해당하는 시차에 따라 지수적으로 감소
+
+$ARMA(1, 1)_{12}$
+
+-   ACF : 12시차 이후부터 계절주기 12의 배수의 해당되는 시차에 따라 지수적으로 감소
+-   PACF : 12시차 이후부터 계절주기 12의 배수의 해당되는 시차에 따라 지수적으로 감소
+
+계절형 확인
+
+-   ACF 12차 근처에서만 유의적 : P = 0, Q = 1
+-   PACF 12차 근처에서만 유의적 : P = 1, Q = 0
+
+비계절형 확인
+
+-   ACF 절단, PACF 감소 : p = 0, q = 1
+
+-   ACF 감소, PACF 절단 : p = 2, q = 0
+
+최종 후보 모형
+
+-   $ARIMA(0, 1, 1)(0, 1, 1)_{12}$
+
+-   $ARIMA(0, 1, 1)(1, 1, 0)_{12}$
+
+-   $ARIMA(2, 1, 0)(0, 1, 1)_{12}$
+
+-   $ARIMA(2, 1, 0)(1, 1, 0)_{12}$
+
+$ARIMA(0, 1, 1)(0, 1, 1)_{12}$
+
+```{r}
+fit1 <- Arima(lntour, order = c(0, 1, 1), 
+              seasonal = list(order = c(0, 1, 1), period = 12))
+
+checkresiduals(fit1)
+```
+
+### 과대 적합 확인
+
+$ARIMA(0, 1, 1)(0, 1, 1)_{12}$
+
+```{r}
+fit1_1 <- Arima(lntour, order = c(1, 1, 1), 
+              seasonal = list(order = c(0, 1, 1), period = 12))
+
+fit1_2 <- Arima(lntour, order = c(0, 1, 2), 
+              seasonal = list(order = c(0, 1, 1), period = 12))
+confint(fit1)
+confint(fit1_1) # 추가된 모수 유의적 
+confint(fit1_2) # 추가된 모수 유의적
+
+checkresiduals(fit1_1)
+checkresiduals(fit1_2)
+
+
+confint(Arima(lntour, order = c(1, 1, 2), 
+              seasonal = list(order = c(0, 1, 1), period = 12))) # 추가된 모수 비유의 
+
+confint(Arima(lntour, order = c(2, 1, 1), 
+              seasonal = list(order = c(0, 1, 1), period = 12))) # 추가된 모수 비유의 
+
+confint(Arima(lntour, order = c(0, 1, 3), 
+              seasonal = list(order = c(0, 1, 1), period = 12))) # 추가된 모수 비유의 
+
+
+# fit1_1, fit1_2 예측에 사용 가능 
+
+```
+
+$ARIMA(0, 1, 1)(1, 1, 0)_{12}$
+
+```{r}
+fit2 <- Arima(lntour, order = c(0, 1, 1), 
+              seasonal = list(order = c(1, 1, 0), period = 12))
+
+checkresiduals(fit2) # 백색잡음 오차 가정 위반 
+```
+
+### 과대적합
+
+$ARIMA(0, 1, 1)(1, 1, 0)_{12}$
+
+```{r}
+fit2_1 <- Arima(lntour, order = c(1, 1, 1), 
+              seasonal = list(order = c(1, 1, 0), period = 12))
+fit2_2 <- Arima(lntour, order = c(0, 1, 2), 
+              seasonal = list(order = c(1, 1, 0), period = 12))
+confint(fit2_1) # 추가된 모수 유의 
+confint(fit2_2) # 추가된 모수 유의
+
+checkresiduals(fit2_1)
+checkresiduals(fit2_2)
+
+```
+
+### 추가 과대적합
+
+$ARIMA(1, 1, 1)(1, 1, 0)_{12}$, $ARIMA(0, 1, 2)(1, 1, 0)_{12}$
+
+```{r}
+confint(Arima(lntour, order = c(1, 1, 2), 
+              seasonal = list(order = c(1, 1, 0), period = 12))) # 추가된 모수 비유의 
+
+confint(Arima(lntour, order = c(2, 1, 1), 
+              seasonal = list(order = c(1, 1, 0), period = 12))) # 추가된 모수 비유의 
+
+confint(Arima(lntour, order = c(0, 1, 3), 
+              seasonal = list(order = c(1, 1, 0), period = 12))) # 추가된 모수 비유의 
+
+# fit2_1, fit2_2 잠정 후보 모형 
+```
+
+$ARIMA(2, 1, 0)(0, 1, 1)_{12}$
+
+```{r}
+fit3 <- Arima(lntour, order = c(2, 1, 0), 
+              seasonal = list(order = c(0, 1, 1), period = 12))
+
+checkresiduals(fit3) # 백색잡음 오차 가정 위반 
+```
+
+### 과대적합
+
+$ARIMA(2, 1, 0)(0, 1, 1)_{12}$
+
+```{r}
+confint(Arima(lntour, order = c(2, 1, 1), 
+              seasonal = list(order = c(0, 1, 1), period = 12))) # 추가된 모수 비유의 
+confint(Arima(lntour, order = c(3, 1, 0), 
+              seasonal = list(order = c(0, 1, 1), period = 12))) # 추가된 모수 비유의 
+
+# fit3 잠정 후보 모형 
+
+```
+
+$ARIMA(2, 1, 0)(1, 1, 0)_{12}$
+
+```{r}
+fit4 <- Arima(lntour, order = c(2, 1, 0), 
+              seasonal = list(order = c(1, 1, 0), period = 12))
+
+checkresiduals(fit4) # 백색잡음 오차 가정 위반 
+```
+
+### 과대 적합
+
+$ARIMA(2, 1, 0)(1, 1, 0)_{12}$
+
+```{r}
+confint(Arima(lntour, order = c(2, 1, 1), 
+              seasonal = list(order = c(1, 1, 0), period = 12))) # 추가된 모수 비유의 
+
+confint(Arima(lntour, order = c(3, 1, 0), 
+              seasonal = list(order = c(1, 1, 0), period = 12))) # 추가된 모수 비유의 
+
+# fit4 잠정 후보 모형 
+```
+
+## 잠정 후보 모형 AIC, BIC 비교
+
+최종모형 : $ARIMA(2, 1, 0)(1, 1, 0)_{12}$
+
+```{r}
+c(fit1_1$aic, fit1_1$bic)
+c(fit1_2$aic, fit1_2$bic)
+c(fit2_1$aic, fit2_1$bic)
+c(fit2_2$aic, fit2_2$bic)
+c(fit3$aic, fit3$bic)
+c(fit4$aic, fit4$bic)
+
+# fit4 최종 모형으로 선택 
+```
+
+## 예측
+
+### 로그 변환된 자료에 대한 예측
+
+```{r}
+fit4 <- Arima(lntour, order = c(2, 1, 0), 
+              seasonal = list(order = c(1, 1, 0), period = 12))
+plot(forecast(fit4, h = 12))
+```
+
+### 원자료에 대한 예측
+
+```{r}
+fit4_1 <- Arima(tour.ts, order = c(2, 1, 0), 
+              seasonal = list(order = c(1, 1, 0), period = 12), lambda = 0)
+plot(forecast(fit4_1, h = 12))
+
+```
+
+## 실제값과 예측값 비교
+
+```{r}
+tour92 <- scan('tour92.txt')
+tour92 <- ts(tour92, start = 1992, freq = 12)
+
+
+fore_arima <- forecast(fit4_1, h = 12, level = 95)
+plot(fore_arima)
+new_t <- seq(1992, by = 1/12, length = 12)
+lines(new_t, tour92, col = 'red')
+
+accuracy(fore_arima, tour92)
+```
+
+# 회귀모형을 이용한 시계열분석
+
+```{r}
+tour <- scan('tourist.txt')
+tour.ts <- ts(tour, start = 1981, frequency = 12)
+
+tour92 <- scan('tour92.txt')
+tour92 <- ts(tour92, start = 1992, freq = 12)
+
+lntour <- log(tour.ts)
+```
+
+## 1차 추세계절 회귀모형
+
+2차 추세모형 or 강한 상관관계
+
+```{r}
+Time <- time(lntour)
+Month <- cycle(lntour)
+fit1 <- lm(lntour~Time + factor(Month) + 0)
+summary(fit1)
+checkresiduals(fit1)
+```
+
+## 2차 추세모형
+
+양의 상관관계 존재
+
+```{r}
+fit2 <- lm(lntour~Time + I(Time^2) + factor(Month) + 0)
+checkresiduals(fit2)
+```
+
+### 오차모형
+
+AR(3) 식별
+
+```{r}
+Resid <- fit2$residuals
+ggtsdisplay(Resid, lag.max = 48)
+```
+
+### 오차 모형 적합
+
+```{r}
+fit_r1 <- Arima(Resid, order = c(3, 0, 0), include.mean = FALSE)
+confint(fit_r1) 
+
+checkresiduals(fit_r1)
+
+confint(Arima(Resid, order = c(3, 0, 1), include.mean = FALSE)) # 추가된 모수 비유의 
+confint(Arima(Resid, order = c(4, 0, 0), include.mean = FALSE)) # 추가된 모수 비유의 
+```
+
+## 2차 추세계절 + AR(3) 오차 회귀모형
+
+역행렬 계산 안될 경우 1차 추세모형 대신 시도
+
+```{r, eval=FALSE}
+fit_x <- model.matrix(fit2)
+f1 <- Arima(tour.ts, order = c(3, 0, 0), include.mean = FALSE, xreg = fit_x, lambda = 0)
+```
+
+## 1차 추세 계절 모형의 오차 모형
+
+```{r}
+Resid <- fit1$residuals
+ggtsdisplay(Resid, lag.max = 48) # AR(3)
+```
+
+### 오차 모형 적합
+
+$AR(3)$ 모형 확정
+
+```{r}
+fit_r2 <- Arima(Resid, order = c(3, 0, 0), include.mean = FALSE)
+confint(fit_r2)
+
+checkresiduals(fit_r2)
+
+confint(Arima(Resid, order = c(3, 0, 1), include.mean = FALSE)) # 추가된 모수 비유의 
+confint(Arima(Resid, order = c(4, 0, 0), include.mean = FALSE)) # 추가된 모수 비유의 
+
+```
+
+## 1차 추세계절 + AR(3) 오차 회귀모형
+
+```{r}
+fit_x <- model.matrix(fit1)
+f1 <- Arima(tour.ts, order = c(3, 0, 0), include.mean = FALSE, xreg = fit_x, lambda = 0)
+```
+
+## 예측
+
+```{r}
+new.t <- time(ts(start = c(1992, 1), end = c(1992, 12), freq = 12))
+new.x <- cbind(new.t, diag(rep(1, 12)))
+
+fore_reg <- forecast(f1, xreg = new.x, level = 95)
+plot(fore_reg)
+```
+
+# 예측 성능 비교
+
+```{r}
+accuracy(fore_arima, tour92)
+accuracy(fore_reg, tour92)
+
+```
