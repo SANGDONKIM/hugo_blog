@@ -1,31 +1,19 @@
 ---
 title: 'Multi classification with tidymodels '
-author: dondon
+author: "dondon"
 date: '2021-06-02'
 slug: multi-classification-with-tidymodels
-categories:
-  - R
-tags:
-  - Machine learning
-output:
-    blogdown::html_page:
-    number_sections: true
-    fig_caption: true
-    toc: true
-    fig_width: 5
-    fig_height: 4
-    theme: cosmo
-    highlight: tango
-    code_folding: show  
+categories: R
+tags: Machine learning
 ---
 
 # Multi classification tutorial
 
 ADP 시험을 대비해서 multi classification tutorial을 정리해보겠다. R kaggle 스터디를 진행하면서 4월달에 데이콘에 올라온 신용카드 사용자 연체 예측 AI 경진대회에 참여했다. 정형 데이터 분석 문제이지만 multi classification 문제여서 나름 재밌게 진행했다. 월간 데이콘 대회이므로 1등부터 10등까지 솔루션이 이미 나와있다. 자세한 사항은 데이콘 홈페이지를 참고바란다.
 
-ADP 시험 대비이므로 데이콘 데이터의 일부를 이용해서 튜토리얼을 작성해보겠다.
+ADP 시험 대비이므로 데이콘 데이터의 일부를 이용해서 튜토리얼을 작성해본다. 데이터의 일부를 사용하기 때문에 모델 performance는 안좋지만 코드와 분석 플로우 위주로 봐주시면 좋겠다.
 
-# Preparations {.tabset .tabset-fade}
+# Preparations 
 
 ## Libraries
 
@@ -56,19 +44,22 @@ files
 
 ```{r, message=FALSE}
 train <- read_csv(file.path(file_path, "train.csv")) %>% janitor::clean_names()
-test <- read_csv(file.path(file_path, "test.csv")) %>% janitor::clean_names()
-
+# test <- read_csv(file.path(file_path, "test.csv")) %>% janitor::clean_names() # target 없으므로 tutorial에서는 제외함 
 
 # sampling 
 set.seed(123)
-ind <- sample(1:26457, 1000, replace = F)
-train <- train[ind, ]
+ind <- sample(1:26457, 2000, replace = F)
+dat <- train[ind, ]
 
-ind_test <- sample(1:10000, 300, replace = F)
-test <- test[ind_test, ]
+dat$credit %>% table()
+
+splits <- initial_split(dat, prop = 0.7, strata = credit)
+
+train <- training(splits)
+test <- testing(splits)
 ```
 
-# Data overview (데이터 기본정보) {.tabset .tabset-fade}
+# Data overview (데이터 기본정보) 
 
 ## train data
 
@@ -84,7 +75,7 @@ head(test)
 skim(test)
 ```
 
-# data preprocessing {.tabset .tabset-fade}
+# data preprocessing
 
 ## Change variable type
 
@@ -100,12 +91,13 @@ test %>%
     mutate_at(cols2, funs(factor(.))) -> test
 ```
 
-## change date variable
+# Univariate visualization
 
-days_birth : 출생일(-1이면 데이터 수집일 하루 전에 태어났음을 의미) days_employed : 업무 시작일(-1이면 데이터 수집일 하루 전부터 일을 시작했음을 의미) begin_month : 신용카드 발급 월(-1은 데이터 수집일 한 달 전에 신용카드를 발급했음을 의미)
+## income_type : 소득 분류
+
+commercial associate, pensioner(연금 수급자), state servant(공무원), student, working
 
 ```{r}
-
 ymd_rec <- train %>% 
   recipe(credit~.) %>% 
   step_mutate(
@@ -121,121 +113,6 @@ ymd_rec <- train %>%
   prep(training = train) 
 
 train_eda <- juice(ymd_rec)
-```
-
-# date variable visualization {.tabset .tabset-fade}
-
-## month_employed : 업무 시작달
-
-```{r}
-a1 <- train_eda %>% 
-  ggplot(aes(x = month_employed)) + geom_histogram(bins = 100)
-
-a2 <- train_eda %>% 
-  filter(month_employed != 12699) %>% 
-  ggplot(aes(x = month_employed)) + geom_histogram(bins = 100)
-
-grid.arrange(a1, a2)
-```
-
-## month_employed == 12699 : 퇴직자의 경우
-
-```{r}
-train_eda %>% 
-  filter(month_employed == 12699) %>% 
-  ggplot(aes(x = credit)) + geom_bar()+
-  geom_label(stat = 'count', aes(label = ..count..))
-
-train_eda %>% 
-  filter(month_employed == 12699) %>% 
-  ggplot(aes(x = income_total)) + geom_histogram(bins = 50)
-```
-
-## discretize month_employed
-
-```{r}
-train_eda %>% 
-  select(month_employed) %>% 
-  filter(month_employed!=12699) %>% 
-  summary()
-
-train_eda %>% 
-  recipe(credit~.) %>%
-  step_mutate(discrize_employed = month_employed) %>% 
-  step_cut(discrize_employed, breaks = c(407, 458, 491, 523, 12699)) %>% 
-  prep(training = train_eda) %>% 
-  bake(new_data = train_eda) %>% 
-  ggplot(aes(x = discrize_employed)) + geom_bar() +  
-  geom_label(stat = 'count', aes(label = ..count..))
-
-```
-
-## discretization 기준
-
-특정 구간과 credit 간의 상관 관계가 가장 큰 구간을 선택할 필요가 있음. 카이제곱 통계량이 가장 큰 구간을 상관 관계가 가장 큰 구간이라고 생각하는 것이 합리적? 모형기반 : cart, xgb 기반으로 쪼갤 수도 있음. y에 연관성이 들어가는게 합리적?
-
-embed::step_discretize_cart, step_discretize_xgb\
-<https://embed.tidymodels.org/reference/step_discretize_cart.html>
-
-```{r}
-train_eda %>% 
-  recipe(credit~.) %>%
-  step_mutate(disc_employed = month_employed) %>% 
-  step_cut(disc_employed, breaks = c(407, 458, 491, 523, 12699)) %>% 
-  prep(training = train_eda) %>% 
-  bake(new_data = train_eda) %>% 
-  select(disc_employed, credit) %>% 
-  table() %>% 
-  chisq.test()
-```
-
-## year_birth
-
-```{r}
-train_eda$year_birth %>% summary()
-train_eda %>% 
-  ggplot(aes(x=year_birth)) + geom_histogram()
-
-train_eda %>% 
-  recipe(credit~.) %>%
-  step_mutate(disc_birth = year_birth) %>% 
-  step_cut(disc_birth, breaks = c(10, 20, 30, 40)) %>% 
-  prep(training = train_eda) %>% 
-  bake(new_data = train_eda) %>% 
-  select(disc_birth) %>% 
-  ggplot(aes(x = disc_birth)) + geom_bar()+
-  geom_label(stat = 'count', aes(label = ..count..))
-  
-
-```
-
-## begin_month : 신용카드 발급 이후 몇달이 지났는지(begin_year : 신용카드 발급 후 몇년이 지났는지)
-
-```{r}
-train_eda %>% 
-  ggplot(aes(x = begin_month)) + geom_histogram()
-
-train_eda$begin_month %>% summary()
-train_eda$begin_year %>% summary()
-
-train_eda %>% 
-  recipe(credit~.) %>%
-  step_mutate(disc_begin = begin_year) %>% 
-  step_cut(disc_begin, breaks = c(1, 2, 3, 4)) %>% 
-  prep(training = train_eda) %>% 
-  bake(new_data = train_eda) %>% 
-  select(disc_begin) %>% 
-  ggplot(aes(x = disc_begin)) + geom_bar()+
-  geom_label(stat = 'count', aes(label = ..count..))
-```
-
-# Univariate visualization {.tabset .tabset-fade}
-
-## income_type : 소득 분류
-
-commercial associate, pensioner(연금 수급자), state servant(공무원), student, working
-
-```{r}
 train_eda %>% 
   ggplot(aes(x = income_type)) + geom_bar() + 
   aes(stringr::str_wrap(income_type, 15)) + 
@@ -273,22 +150,6 @@ train_eda %>%
 train_eda %>% 
   filter(!is.na(house_type), !is.na(credit)) %>% 
   ggplot()+geom_mosaic(aes(x = product(house_type, credit), fill = house_type))
-
-```
-
-## email
-
-```{r}
-train_eda %>% 
-  ggplot(aes(x = email)) + geom_bar() + 
-  geom_label(stat = 'count', aes(label = ..count..))
-
-train_eda %>% 
-  ggplot(aes(x = email, y = income_total, fill = email)) + geom_boxplot()
-
-train_eda %>% 
-  filter(!is.na(email), !is.na(credit)) %>% 
-  ggplot()+geom_mosaic(aes(x = product(email, credit), fill = email))
 
 ```
 
@@ -341,45 +202,39 @@ model_rec <- train %>%
   
 #  step_dummy(all_nominal(), -credit, one_hot = TRUE) %>%
   step_normalize(all_numeric(), -all_outcomes()) %>% 
-  
-  step_rm(days_birth, days_employed, begin_month, month_employed) %>% 
-  
-  prep(training = train)
+  step_rm(days_birth, days_employed, begin_month, month_employed)
   #step_smote(credit, over_ratio = tune()) 
-
-# upsampling tuning : https://konradsemsch.netlify.app/2019/10/testing-the-tune-package-from-tidymodels-analysing-the-relationship-between-the-upsampling-ratio-and-model-performance/
 
 ```
 
 ## train/test
 
 ```{r}
-train2 <- juice(model_rec)
-test2 <- bake(model_rec, new_data = test)
+train2 <- model_rec %>% prep(training = train) %>% juice()
+test2 <- model_rec %>% prep() %>% bake(new_data = test)
 ```
 
-## validation set
+# validation set
 
 ```{r}
 set.seed(20210505)
-vb_folds <- vfold_cv(train2, v = 5, strata = credit)
+vb_folds <- vfold_cv(train2, v = 3, strata = credit)
 ```
 
-# stacking param
+## stacking param
 
 ```{r}
 ctrl_grid <- control_stack_grid()
 ```
 
-# randomforest setting {.tabset .tabset-fade}
+# randomforest setting
 
 ## randomforest hyperparameter setting
 
 ```{r}
 rf_spec <- rand_forest(
   mtry = tune(), 
-  trees = 1000, 
-  min_n = tune()
+  trees = 1000
 ) %>% 
   set_mode('classification') %>% 
   set_engine('ranger')
@@ -398,6 +253,7 @@ rf_wf <- workflow() %>%
 ```{r}
 library(tictoc)
 tic()
+
 doParallel::registerDoParallel()
 set.seed(1234)
 
@@ -405,11 +261,10 @@ rf_res <- tune_grid(
     rf_wf,  
     resamples = vb_folds, 
     grid = 5,
-    metrics = metric_set(mn_log_loss), 
+    metrics = metric_set(mn_log_loss), # multi class 일 때 
     control = ctrl_grid    
 )
-toc() # 14075.76  
-# mtry : 44, min_n = 16
+toc() 
 rf_res$.metrics
 ```
 
@@ -425,7 +280,6 @@ final_rf
 
 ```{r}
 final_rf_model <- finalize_model(rf_spec, best_param_rf) 
-final_rf_model 
 ```
 
 ## final model workflow에 업데이트
@@ -440,7 +294,7 @@ final_rf_workflow <- rf_wf %>% update_model(final_rf_model)
 rf_fit <- fit(final_rf_workflow, data = train2)
 ```
 
-# Result {.tabset .tabset-fade}
+# Result
 
 ## Prediction
 
@@ -448,115 +302,31 @@ rf_fit <- fit(final_rf_workflow, data = train2)
 pred_rf <- 
     predict(rf_fit, test2, type = 'prob')
 pred_rf %>% head() 
-
 ```
 
-# XGboost setting {.tabset .tabset-fade}
-
-## XGBOOST hyperparameter setting
+## confusion matrix
 
 ```{r}
-xgb_spec <- boost_tree(
-    trees = 1000,  
-    tree_depth = tune(),  
-    min_n = tune(), 
-    loss_reduction = tune(),  
-    sample_size = tune(), 
-    mtry = tune(),  
-    learn_rate = tune()
-) %>% 
-    set_engine('xgboost') %>%  
-    set_mode('classification')
-```
-
-# XGboost workflow {.tabset .tabset-fade}
-
-## workflow model setting
-
-```{r}
-xgb_wf <- workflow() %>% 
-    add_formula(credit~.) %>% 
-    add_model(xgb_spec)
-```
-
-## Grid search
-
-```{r}
-xgb_grid <- grid_latin_hypercube(
-    tree_depth(), 
-    min_n(), 
-    loss_reduction(), 
-    sample_size = sample_prop(), 
-    finalize(mtry(), train2), 
-    learn_rate(), 
-    size = 30
-)
-```
-
-## hyperparameter 튜닝
-
-```{r}
-library(tictoc)
-tic()
-doParallel::registerDoParallel()
-set.seed(1234)
-
-xgb_res <- tune_grid(
-    xgb_wf,  
+rf_res1 <- tune_grid(
+    rf_wf,  
     resamples = vb_folds, 
-    grid = xgb_grid, 
-    metrics = metric_set(mn_log_loss),
-    control = ctrl_grid    
+    grid = 5, 
+    control = control_resamples(save_pred = T)   
 )
-toc()  # 2411.84 sec 
-```
+rf_res1 %>% 
+  collect_predictions() %>% 
+  conf_mat(credit, .pred_class)
 
-## Final model update
+rf_res1 %>% 
+  collect_metrics()
 
-```{r}
-best_param_xgb <- select_best(xgb_res)
-final_xgb <- finalize_workflow(xgb_wf, best_param_xgb)
-# 51	28	15	0.002188723	1.791991e-06	0.8873527	Preprocessor1_Model10
-```
+rf_fit %>% 
+  predict(test2) %>% 
+  bind_cols(test2$credit) %>% 
+  conf_mat(...2, .pred_class)
 
-## final model setting
+  
 
-```{r}
-final_model <- finalize_model(xgb_spec, best_param_xgb) 
-```
-
-## final model workflow에 업데이트
-
-```{r}
-final_xgb_workflow <- xgb_wf %>% update_model(final_model)
-```
-
-## final model 학습
-
-```{r}
-xgb_fit <- fit(final_xgb_workflow, data = train2)
-```
-
-# Result {.tabset .tabset-fade}
-
-## Prediction
-
-```{r}
-pred_xgb <- 
-    predict(xgb_fit, test2, type = 'prob') 
-pred_xgb %>% head()
-
-```
-
-## feature importance plot
-
-```{r}
-library(vip) 
-final_xgb %>% 
-    fit(data = train2) %>%   
-    pull_workflow_fit() %>% 
-    vip(geom = 'point') 
-# begin_month, month_birth, month_employed, begin_year, income_total, year_birth, year_employed, car, phone, occp_type
 ```
 
 # regularized multinomial regression
@@ -600,7 +370,7 @@ multi_spec <- multinom_reg(mode = "classification",
 ```
 
 ```{r}
-lambda_grid <- grid_max_entropy(parameters(penalty(), mixture()), size = 50)
+lambda_grid <- grid_max_entropy(parameters(penalty(), mixture()), size = 20)
 ```
 
 ```{r}
@@ -642,6 +412,7 @@ multi_fit <- fit(multi_final_workflow, data = train3)
 pred_multinom <- 
     predict(multi_fit, test3, type = 'prob') 
 pred_multinom %>% head()
+
 ```
 
 # stacking
@@ -650,11 +421,25 @@ pred_multinom %>% head()
 credit_stacking <- 
   stacks() %>% 
   add_candidates(rf_res) %>% 
-  add_candidates(xgb_res) %>% 
   add_candidates(multi_spec_tbl) %>% 
   blend_predictions() %>% 
   fit_members()
 
 
 result <- predict(credit_stacking, test2)
+
+```
+
+## performance 
+```{r}
+result %>% 
+  bind_cols(test2$credit) %>% 
+  conf_mat(...2, .pred_class)
+
+rf_fit %>% 
+  predict(test2) %>% 
+  bind_cols(test2$credit) %>% 
+  conf_mat(...2, .pred_class) %>% 
+  summary()
+
 ```

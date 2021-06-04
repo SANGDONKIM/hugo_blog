@@ -1,0 +1,1188 @@
+---
+title: 'Multi classification with tidymodels '
+author: "dondon"
+date: '2021-06-02'
+slug: multi-classification-with-tidymodels
+categories: R
+tags: Machine learning
+---
+
+<script src="{{< blogdown/postref >}}index_files/header-attrs/header-attrs.js"></script>
+
+
+<div id="multi-classification-tutorial" class="section level1">
+<h1>Multi classification tutorial</h1>
+<p>ADP 시험을 대비해서 multi classification tutorial을 정리해보겠다. R kaggle 스터디를 진행하면서 4월달에 데이콘에 올라온 신용카드 사용자 연체 예측 AI 경진대회에 참여했다. 정형 데이터 분석 문제이지만 multi classification 문제여서 나름 재밌게 진행했다. 월간 데이콘 대회이므로 1등부터 10등까지 솔루션이 이미 나와있다. 자세한 사항은 데이콘 홈페이지를 참고바란다.</p>
+<p>ADP 시험 대비이므로 데이콘 데이터의 일부를 이용해서 튜토리얼을 작성해본다. 데이터의 일부를 사용하기 때문에 모델 performance는 안좋지만 코드와 분석 플로우 위주로 봐주시면 좋겠다.</p>
+</div>
+<div id="preparations" class="section level1">
+<h1>Preparations</h1>
+<div id="libraries" class="section level2">
+<h2>Libraries</h2>
+<pre class="r"><code>library(tidymodels)
+library(tidyverse)
+library(lubridate)
+library(skimr)
+library(magrittr)
+library(data.table)
+library(gridExtra)
+library(themis)
+library(ggmosaic)
+library(embed)
+library(stacks)
+
+theme_set(theme_bw())</code></pre>
+</div>
+<div id="data-load" class="section level2">
+<h2>Data load</h2>
+<pre class="r"><code>file_path &lt;- getwd()
+files &lt;- list.files(file_path)
+files</code></pre>
+<pre><code>## [1] &quot;index.Rmd&quot;       &quot;index.Rmd.lock~&quot; &quot;index_files&quot;     &quot;test.csv&quot;       
+## [5] &quot;train.csv&quot;</code></pre>
+<pre class="r"><code>train &lt;- read_csv(file.path(file_path, &quot;train.csv&quot;)) %&gt;% janitor::clean_names()
+# test &lt;- read_csv(file.path(file_path, &quot;test.csv&quot;)) %&gt;% janitor::clean_names() # target 없으므로 tutorial에서는 제외함 
+
+# sampling 
+set.seed(123)
+ind &lt;- sample(1:26457, 2000, replace = F)
+dat &lt;- train[ind, ]
+
+dat$credit %&gt;% table()</code></pre>
+<pre><code>## .
+##    0    1    2 
+##  227  511 1262</code></pre>
+<pre class="r"><code>splits &lt;- initial_split(dat, prop = 0.7, strata = credit)
+
+train &lt;- training(splits)
+test &lt;- testing(splits)</code></pre>
+</div>
+</div>
+<div id="data-overview-데이터-기본정보" class="section level1">
+<h1>Data overview (데이터 기본정보)</h1>
+<div id="train-data" class="section level2">
+<h2>train data</h2>
+<pre class="r"><code>head(train)</code></pre>
+<pre><code>## # A tibble: 6 x 20
+##   index gender car   reality child_num income_total income_type edu_type        
+##   &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt; &lt;chr&gt;       &lt;dbl&gt;        &lt;dbl&gt; &lt;chr&gt;       &lt;chr&gt;           
+## 1  6169 F      N     N               0        67500 Working     Secondary / sec~
+## 2 16938 F      N     N               0       180000 Working     Secondary / sec~
+## 3 14182 M      N     Y               0       135000 Pensioner   Lower secondary 
+## 4 25163 F      N     Y               0       157500 Pensioner   Secondary / sec~
+## 5 19290 F      N     N               0       171000 Working     Secondary / sec~
+## 6 18761 F      N     N               2       135000 Working     Secondary / sec~
+## # ... with 12 more variables: family_type &lt;chr&gt;, house_type &lt;chr&gt;,
+## #   days_birth &lt;dbl&gt;, days_employed &lt;dbl&gt;, flag_mobil &lt;dbl&gt;, work_phone &lt;dbl&gt;,
+## #   phone &lt;dbl&gt;, email &lt;dbl&gt;, occyp_type &lt;chr&gt;, family_size &lt;dbl&gt;,
+## #   begin_month &lt;dbl&gt;, credit &lt;dbl&gt;</code></pre>
+<pre class="r"><code>skim(train)</code></pre>
+<table>
+<caption><span id="tab:unnamed-chunk-3">Table 1: </span>Data summary</caption>
+<tbody>
+<tr class="odd">
+<td align="left">Name</td>
+<td align="left">train</td>
+</tr>
+<tr class="even">
+<td align="left">Number of rows</td>
+<td align="left">1398</td>
+</tr>
+<tr class="odd">
+<td align="left">Number of columns</td>
+<td align="left">20</td>
+</tr>
+<tr class="even">
+<td align="left">_______________________</td>
+<td align="left"></td>
+</tr>
+<tr class="odd">
+<td align="left">Column type frequency:</td>
+<td align="left"></td>
+</tr>
+<tr class="even">
+<td align="left">character</td>
+<td align="left">8</td>
+</tr>
+<tr class="odd">
+<td align="left">numeric</td>
+<td align="left">12</td>
+</tr>
+<tr class="even">
+<td align="left">________________________</td>
+<td align="left"></td>
+</tr>
+<tr class="odd">
+<td align="left">Group variables</td>
+<td align="left">None</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Variable type: character</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">skim_variable</th>
+<th align="right">n_missing</th>
+<th align="right">complete_rate</th>
+<th align="right">min</th>
+<th align="right">max</th>
+<th align="right">empty</th>
+<th align="right">n_unique</th>
+<th align="right">whitespace</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">gender</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">2</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">car</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">2</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">reality</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">2</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">income_type</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">7</td>
+<td align="right">20</td>
+<td align="right">0</td>
+<td align="right">5</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">edu_type</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">15</td>
+<td align="right">29</td>
+<td align="right">0</td>
+<td align="right">5</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">family_type</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">5</td>
+<td align="right">20</td>
+<td align="right">0</td>
+<td align="right">5</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">house_type</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">12</td>
+<td align="right">19</td>
+<td align="right">0</td>
+<td align="right">6</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">occyp_type</td>
+<td align="right">412</td>
+<td align="right">0.71</td>
+<td align="right">7</td>
+<td align="right">21</td>
+<td align="right">0</td>
+<td align="right">18</td>
+<td align="right">0</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Variable type: numeric</strong></p>
+<table>
+<colgroup>
+<col width="9%" />
+<col width="7%" />
+<col width="9%" />
+<col width="7%" />
+<col width="7%" />
+<col width="4%" />
+<col width="7%" />
+<col width="6%" />
+<col width="7%" />
+<col width="4%" />
+<col width="28%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">skim_variable</th>
+<th align="right">n_missing</th>
+<th align="right">complete_rate</th>
+<th align="right">mean</th>
+<th align="right">sd</th>
+<th align="right">p0</th>
+<th align="right">p25</th>
+<th align="right">p50</th>
+<th align="right">p75</th>
+<th align="right">p100</th>
+<th align="left">hist</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">index</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">13244.40</td>
+<td align="right">7793.06</td>
+<td align="right">29</td>
+<td align="right">6227.50</td>
+<td align="right">13352.5</td>
+<td align="right">20154.25</td>
+<td align="right">26448</td>
+<td align="left">▇▇▇▇▇</td>
+</tr>
+<tr class="even">
+<td align="left">child_num</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.43</td>
+<td align="right">0.74</td>
+<td align="right">0</td>
+<td align="right">0.00</td>
+<td align="right">0.0</td>
+<td align="right">1.00</td>
+<td align="right">7</td>
+<td align="left">▇▁▁▁▁</td>
+</tr>
+<tr class="odd">
+<td align="left">income_total</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">181111.23</td>
+<td align="right">92767.78</td>
+<td align="right">29250</td>
+<td align="right">112500.00</td>
+<td align="right">157500.0</td>
+<td align="right">225000.00</td>
+<td align="right">900000</td>
+<td align="left">▇▃▁▁▁</td>
+</tr>
+<tr class="even">
+<td align="left">days_birth</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">-15945.50</td>
+<td align="right">4200.90</td>
+<td align="right">-24831</td>
+<td align="right">-19421.25</td>
+<td align="right">-15512.5</td>
+<td align="right">-12432.25</td>
+<td align="right">-7705</td>
+<td align="left">▃▆▇▇▅</td>
+</tr>
+<tr class="odd">
+<td align="left">days_employed</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">58941.72</td>
+<td align="right">137402.28</td>
+<td align="right">-15038</td>
+<td align="right">-3044.75</td>
+<td align="right">-1501.5</td>
+<td align="right">-378.25</td>
+<td align="right">365243</td>
+<td align="left">▇▁▁▁▂</td>
+</tr>
+<tr class="even">
+<td align="left">flag_mobil</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">1.00</td>
+<td align="right">0.00</td>
+<td align="right">1</td>
+<td align="right">1.00</td>
+<td align="right">1.0</td>
+<td align="right">1.00</td>
+<td align="right">1</td>
+<td align="left">▁▁▇▁▁</td>
+</tr>
+<tr class="odd">
+<td align="left">work_phone</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.22</td>
+<td align="right">0.42</td>
+<td align="right">0</td>
+<td align="right">0.00</td>
+<td align="right">0.0</td>
+<td align="right">0.00</td>
+<td align="right">1</td>
+<td align="left">▇▁▁▁▂</td>
+</tr>
+<tr class="even">
+<td align="left">phone</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.29</td>
+<td align="right">0.45</td>
+<td align="right">0</td>
+<td align="right">0.00</td>
+<td align="right">0.0</td>
+<td align="right">1.00</td>
+<td align="right">1</td>
+<td align="left">▇▁▁▁▃</td>
+</tr>
+<tr class="odd">
+<td align="left">email</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.09</td>
+<td align="right">0.29</td>
+<td align="right">0</td>
+<td align="right">0.00</td>
+<td align="right">0.0</td>
+<td align="right">0.00</td>
+<td align="right">1</td>
+<td align="left">▇▁▁▁▁</td>
+</tr>
+<tr class="even">
+<td align="left">family_size</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">2.19</td>
+<td align="right">0.92</td>
+<td align="right">1</td>
+<td align="right">2.00</td>
+<td align="right">2.0</td>
+<td align="right">3.00</td>
+<td align="right">9</td>
+<td align="left">▇▃▁▁▁</td>
+</tr>
+<tr class="odd">
+<td align="left">begin_month</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">-25.79</td>
+<td align="right">16.59</td>
+<td align="right">-60</td>
+<td align="right">-39.00</td>
+<td align="right">-24.0</td>
+<td align="right">-11.00</td>
+<td align="right">0</td>
+<td align="left">▅▆▆▇▇</td>
+</tr>
+<tr class="even">
+<td align="left">credit</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">1.52</td>
+<td align="right">0.69</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">2.0</td>
+<td align="right">2.00</td>
+<td align="right">2</td>
+<td align="left">▂▁▃▁▇</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="test-data" class="section level2">
+<h2>test data</h2>
+<pre class="r"><code>head(test)</code></pre>
+<pre><code>## # A tibble: 6 x 20
+##   index gender car   reality child_num income_total income_type    edu_type     
+##   &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt; &lt;chr&gt;       &lt;dbl&gt;        &lt;dbl&gt; &lt;chr&gt;          &lt;chr&gt;        
+## 1 16127 F      N     Y               0       148500 Pensioner      Secondary / ~
+## 2 21490 F      N     Y               0       126000 Working        Higher educa~
+## 3 25528 F      N     Y               0       121500 Commercial as~ Higher educa~
+## 4  9208 F      N     N               1       112500 Working        Secondary / ~
+## 5 10204 M      N     N               0       180000 Working        Secondary / ~
+## 6  2887 M      Y     Y               0       180000 Working        Secondary / ~
+## # ... with 12 more variables: family_type &lt;chr&gt;, house_type &lt;chr&gt;,
+## #   days_birth &lt;dbl&gt;, days_employed &lt;dbl&gt;, flag_mobil &lt;dbl&gt;, work_phone &lt;dbl&gt;,
+## #   phone &lt;dbl&gt;, email &lt;dbl&gt;, occyp_type &lt;chr&gt;, family_size &lt;dbl&gt;,
+## #   begin_month &lt;dbl&gt;, credit &lt;dbl&gt;</code></pre>
+<pre class="r"><code>skim(test)</code></pre>
+<table>
+<caption><span id="tab:unnamed-chunk-4">Table 2: </span>Data summary</caption>
+<tbody>
+<tr class="odd">
+<td align="left">Name</td>
+<td align="left">test</td>
+</tr>
+<tr class="even">
+<td align="left">Number of rows</td>
+<td align="left">602</td>
+</tr>
+<tr class="odd">
+<td align="left">Number of columns</td>
+<td align="left">20</td>
+</tr>
+<tr class="even">
+<td align="left">_______________________</td>
+<td align="left"></td>
+</tr>
+<tr class="odd">
+<td align="left">Column type frequency:</td>
+<td align="left"></td>
+</tr>
+<tr class="even">
+<td align="left">character</td>
+<td align="left">8</td>
+</tr>
+<tr class="odd">
+<td align="left">numeric</td>
+<td align="left">12</td>
+</tr>
+<tr class="even">
+<td align="left">________________________</td>
+<td align="left"></td>
+</tr>
+<tr class="odd">
+<td align="left">Group variables</td>
+<td align="left">None</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Variable type: character</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">skim_variable</th>
+<th align="right">n_missing</th>
+<th align="right">complete_rate</th>
+<th align="right">min</th>
+<th align="right">max</th>
+<th align="right">empty</th>
+<th align="right">n_unique</th>
+<th align="right">whitespace</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">gender</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">2</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">car</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">2</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">reality</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">2</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">income_type</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">7</td>
+<td align="right">20</td>
+<td align="right">0</td>
+<td align="right">5</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">edu_type</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">15</td>
+<td align="right">29</td>
+<td align="right">0</td>
+<td align="right">4</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">family_type</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">5</td>
+<td align="right">20</td>
+<td align="right">0</td>
+<td align="right">5</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">house_type</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">12</td>
+<td align="right">19</td>
+<td align="right">0</td>
+<td align="right">5</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">occyp_type</td>
+<td align="right">194</td>
+<td align="right">0.68</td>
+<td align="right">7</td>
+<td align="right">21</td>
+<td align="right">0</td>
+<td align="right">18</td>
+<td align="right">0</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Variable type: numeric</strong></p>
+<table>
+<colgroup>
+<col width="9%" />
+<col width="7%" />
+<col width="9%" />
+<col width="7%" />
+<col width="7%" />
+<col width="4%" />
+<col width="7%" />
+<col width="6%" />
+<col width="7%" />
+<col width="4%" />
+<col width="28%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">skim_variable</th>
+<th align="right">n_missing</th>
+<th align="right">complete_rate</th>
+<th align="right">mean</th>
+<th align="right">sd</th>
+<th align="right">p0</th>
+<th align="right">p25</th>
+<th align="right">p50</th>
+<th align="right">p75</th>
+<th align="right">p100</th>
+<th align="left">hist</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">index</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">13642.75</td>
+<td align="right">7400.28</td>
+<td align="right">44</td>
+<td align="right">7767.75</td>
+<td align="right">13853.5</td>
+<td align="right">20025.25</td>
+<td align="right">26418</td>
+<td align="left">▆▇▇▇▇</td>
+</tr>
+<tr class="even">
+<td align="left">child_num</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.43</td>
+<td align="right">0.70</td>
+<td align="right">0</td>
+<td align="right">0.00</td>
+<td align="right">0.0</td>
+<td align="right">1.00</td>
+<td align="right">3</td>
+<td align="left">▇▂▁▁▁</td>
+</tr>
+<tr class="odd">
+<td align="left">income_total</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">193824.87</td>
+<td align="right">105732.28</td>
+<td align="right">45000</td>
+<td align="right">121500.00</td>
+<td align="right">175500.0</td>
+<td align="right">225000.00</td>
+<td align="right">720000</td>
+<td align="left">▇▅▁▁▁</td>
+</tr>
+<tr class="even">
+<td align="left">days_birth</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">-15962.48</td>
+<td align="right">4208.55</td>
+<td align="right">-24777</td>
+<td align="right">-19375.50</td>
+<td align="right">-15347.5</td>
+<td align="right">-12496.75</td>
+<td align="right">-8326</td>
+<td align="left">▃▆▆▇▅</td>
+</tr>
+<tr class="odd">
+<td align="left">days_employed</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">57203.43</td>
+<td align="right">135962.25</td>
+<td align="right">-15038</td>
+<td align="right">-3348.75</td>
+<td align="right">-1616.5</td>
+<td align="right">-458.50</td>
+<td align="right">365243</td>
+<td align="left">▇▁▁▁▂</td>
+</tr>
+<tr class="even">
+<td align="left">flag_mobil</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">1.00</td>
+<td align="right">0.00</td>
+<td align="right">1</td>
+<td align="right">1.00</td>
+<td align="right">1.0</td>
+<td align="right">1.00</td>
+<td align="right">1</td>
+<td align="left">▁▁▇▁▁</td>
+</tr>
+<tr class="odd">
+<td align="left">work_phone</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.23</td>
+<td align="right">0.42</td>
+<td align="right">0</td>
+<td align="right">0.00</td>
+<td align="right">0.0</td>
+<td align="right">0.00</td>
+<td align="right">1</td>
+<td align="left">▇▁▁▁▂</td>
+</tr>
+<tr class="even">
+<td align="left">phone</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.28</td>
+<td align="right">0.45</td>
+<td align="right">0</td>
+<td align="right">0.00</td>
+<td align="right">0.0</td>
+<td align="right">1.00</td>
+<td align="right">1</td>
+<td align="left">▇▁▁▁▃</td>
+</tr>
+<tr class="odd">
+<td align="left">email</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.10</td>
+<td align="right">0.30</td>
+<td align="right">0</td>
+<td align="right">0.00</td>
+<td align="right">0.0</td>
+<td align="right">0.00</td>
+<td align="right">1</td>
+<td align="left">▇▁▁▁▁</td>
+</tr>
+<tr class="even">
+<td align="left">family_size</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">2.18</td>
+<td align="right">0.88</td>
+<td align="right">1</td>
+<td align="right">2.00</td>
+<td align="right">2.0</td>
+<td align="right">3.00</td>
+<td align="right">5</td>
+<td align="left">▃▇▂▁▁</td>
+</tr>
+<tr class="odd">
+<td align="left">begin_month</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">-25.55</td>
+<td align="right">16.46</td>
+<td align="right">-60</td>
+<td align="right">-38.00</td>
+<td align="right">-24.0</td>
+<td align="right">-11.25</td>
+<td align="right">0</td>
+<td align="left">▅▅▇▇▇</td>
+</tr>
+<tr class="even">
+<td align="left">credit</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">1.51</td>
+<td align="right">0.69</td>
+<td align="right">0</td>
+<td align="right">1.00</td>
+<td align="right">2.0</td>
+<td align="right">2.00</td>
+<td align="right">2</td>
+<td align="left">▂▁▃▁▇</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="data-preprocessing" class="section level1">
+<h1>data preprocessing</h1>
+<div id="change-variable-type" class="section level2">
+<h2>Change variable type</h2>
+<pre class="r"><code>cols1 &lt;- colnames(train)[c(13:18, 20)]
+train %&gt;% 
+    mutate_if(is.character, as.factor) %&gt;% 
+    mutate_at(cols1, funs(factor(.))) -&gt; train</code></pre>
+<pre><code>## Warning: `funs()` was deprecated in dplyr 0.8.0.
+## Please use a list of either functions or lambdas: 
+## 
+##   # Simple named list: 
+##   list(mean = mean, median = median)
+## 
+##   # Auto named with `tibble::lst()`: 
+##   tibble::lst(mean, median)
+## 
+##   # Using lambdas
+##   list(~ mean(., trim = .2), ~ median(., na.rm = TRUE))</code></pre>
+<pre class="r"><code>cols2 &lt;- colnames(train)[c(13:18)]
+test %&gt;% 
+    mutate_if(is.character, as.factor) %&gt;% 
+    mutate_at(cols2, funs(factor(.))) -&gt; test</code></pre>
+</div>
+</div>
+<div id="univariate-visualization" class="section level1">
+<h1>Univariate visualization</h1>
+<div id="income_type-소득-분류" class="section level2">
+<h2>income_type : 소득 분류</h2>
+<p>commercial associate, pensioner(연금 수급자), state servant(공무원), student, working</p>
+<pre class="r"><code>ymd_rec &lt;- train %&gt;% 
+  recipe(credit~.) %&gt;% 
+  step_mutate(
+              days_birth = days_birth + 25152, # 출생일
+              days_employed = days_employed + 15713, # 업무 시작일  
+              begin_month = begin_month + 60) %&gt;% 
+  step_mutate(
+              year_birth = round(days_birth/365), 
+              month_birth = round(days_birth/30), 
+              year_employed = round(days_employed/365),
+              month_employed = round(days_employed/30), 
+              begin_year = begin_month/12) %&gt;% 
+  prep(training = train) 
+
+train_eda &lt;- juice(ymd_rec)
+train_eda %&gt;% 
+  ggplot(aes(x = income_type)) + geom_bar() + 
+  aes(stringr::str_wrap(income_type, 15)) + 
+  xlab(&#39;income_type&#39;)+
+  geom_label(stat = &#39;count&#39;, aes(label = ..count..))</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<pre class="r"><code>train_eda %&gt;% 
+  ggplot(aes(x = income_type, y = income_total)) + 
+  geom_boxplot(aes(fill = income_type)) </code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-6-2.png" width="672" /></p>
+<pre class="r"><code>train_eda %&gt;% 
+  filter(!is.na(income_type), !is.na(credit)) %&gt;% 
+  ggplot()+geom_mosaic(aes(x = product(income_type, credit), fill = income_type))</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-6-3.png" width="672" /></p>
+</div>
+<div id="house_type-생활-방식" class="section level2">
+<h2>house_type : 생활 방식</h2>
+<p>co-op apartment(주택 협동조합), house apartment, municipal apartment(공공 주택), office apartment(회사), rented apartment(임대 주택), with parents</p>
+<pre class="r"><code>train_eda %&gt;% 
+  ggplot(aes(x = house_type)) + geom_bar() + 
+  aes(stringr::str_wrap(house_type, 15)) + 
+  xlab(&#39;house_type&#39;)+
+  geom_label(stat = &#39;count&#39;, aes(label = ..count..))</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<pre class="r"><code>train_eda %&gt;% 
+  ggplot(aes(x = house_type, y = income_total)) + 
+  aes(stringr::str_wrap(house_type, 15)) +
+  xlab(&#39;house_type&#39;)+
+  geom_boxplot(aes(fill = house_type)) </code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-7-2.png" width="672" /></p>
+<pre class="r"><code>train_eda %&gt;% 
+  filter(!is.na(house_type), !is.na(credit)) %&gt;% 
+  ggplot()+geom_mosaic(aes(x = product(house_type, credit), fill = house_type))</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-7-3.png" width="672" /></p>
+</div>
+<div id="occupation-type" class="section level2">
+<h2>occupation type</h2>
+<p>accountants, cleaning staff, cooking staff, core staff(정규직), drivers, high skill tech staff, HR staff, IT staff, Laborers, Low-skill Laborers, managers, medicine staff</p>
+<pre class="r"><code>train_eda %&gt;% 
+  ggplot(aes(x = occyp_type)) + geom_bar() + 
+  geom_label(stat = &#39;count&#39;, aes(label = ..count..))+
+  coord_flip()</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<pre class="r"><code>train_eda %&gt;% 
+  filter(!is.na(occyp_type), !is.na(credit)) %&gt;% 
+  ggplot(aes(x = occyp_type, y = income_total, fill = occyp_type)) + 
+  geom_boxplot() + 
+  coord_flip()</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-8-2.png" width="672" /></p>
+<pre class="r"><code>train_eda %&gt;% 
+  filter(!is.na(occyp_type), !is.na(credit)) %&gt;% 
+  ggplot()+geom_mosaic(aes(x = product(occyp_type, credit), fill =occyp_type))</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-8-3.png" width="672" /></p>
+</div>
+</div>
+<div id="recipe" class="section level1">
+<h1>Recipe</h1>
+<pre class="r"><code>model_rec &lt;- train %&gt;% 
+  recipe(credit~.) %&gt;%
+  step_rm(flag_mobil, index) %&gt;% 
+  step_mutate(
+              days_birth = days_birth + 25152, # 출생일
+              days_employed = days_employed + 15713, # 업무 시작일  
+              begin_month = begin_month + 60) %&gt;% 
+  step_mutate(
+              month_birth = round(days_birth/30), 
+              month_employed = round(days_employed/30)) %&gt;%
+  step_mutate(
+              disc_employed = month_employed) %&gt;%
+  
+#  step_cut(disc_birth, breaks = c(10, 20, 30, 40)) %&gt;% 
+  step_cut(disc_employed, breaks = c(407, 458, 491, 523, 12699)) %&gt;%
+#  step_cut(disc_begin, breaks = c(1, 2, 3, 4)) %&gt;% 
+  
+  step_other(income_type, occyp_type, house_type, threshold = 0.1, other = &#39;infreq_combined&#39;) %&gt;% 
+  
+  step_impute_bag(occyp_type, impute_with = imp_vars(car, reality, income_total, income_type, edu_type, house_type, family_type, family_size),  trees = 100) %&gt;% 
+  
+#  step_dummy(all_nominal(), -credit, one_hot = TRUE) %&gt;%
+  step_normalize(all_numeric(), -all_outcomes()) %&gt;% 
+  step_rm(days_birth, days_employed, begin_month, month_employed)
+  #step_smote(credit, over_ratio = tune()) </code></pre>
+<div id="traintest" class="section level2">
+<h2>train/test</h2>
+<pre class="r"><code>train2 &lt;- model_rec %&gt;% prep(training = train) %&gt;% juice()
+test2 &lt;- model_rec %&gt;% prep() %&gt;% bake(new_data = test)</code></pre>
+<pre><code>## Warning:  There was 1 column that was a factor when the recipe was prepped:
+##  &#39;credit&#39;.
+##  This may cause errors when processing new data.</code></pre>
+</div>
+</div>
+<div id="validation-set" class="section level1">
+<h1>validation set</h1>
+<pre class="r"><code>set.seed(20210505)
+vb_folds &lt;- vfold_cv(train2, v = 3, strata = credit)</code></pre>
+<div id="stacking-param" class="section level2">
+<h2>stacking param</h2>
+<pre class="r"><code>ctrl_grid &lt;- control_stack_grid()</code></pre>
+</div>
+</div>
+<div id="randomforest-setting" class="section level1">
+<h1>randomforest setting</h1>
+<div id="randomforest-hyperparameter-setting" class="section level2">
+<h2>randomforest hyperparameter setting</h2>
+<pre class="r"><code>rf_spec &lt;- rand_forest(
+  mtry = tune(), 
+  trees = 1000
+) %&gt;% 
+  set_mode(&#39;classification&#39;) %&gt;% 
+  set_engine(&#39;ranger&#39;)</code></pre>
+</div>
+<div id="workflow-model-setting" class="section level2">
+<h2>workflow model setting</h2>
+<pre class="r"><code>rf_wf &lt;- workflow() %&gt;% 
+    add_formula(credit~.) %&gt;% 
+    add_model(rf_spec)</code></pre>
+</div>
+<div id="hyperparameter-튜닝" class="section level2">
+<h2>hyperparameter 튜닝</h2>
+<pre class="r"><code>library(tictoc)
+tic()
+
+doParallel::registerDoParallel()
+set.seed(1234)
+
+rf_res &lt;- tune_grid(
+    rf_wf,  
+    resamples = vb_folds, 
+    grid = 5,
+    metrics = metric_set(mn_log_loss), # multi class 일 때 
+    control = ctrl_grid    
+)</code></pre>
+<pre><code>## i Creating pre-processing data to finalize unknown parameter: mtry</code></pre>
+<pre class="r"><code>toc() </code></pre>
+<pre><code>## 10.27 sec elapsed</code></pre>
+<pre class="r"><code>rf_res$.metrics</code></pre>
+<pre><code>## [[1]]
+## # A tibble: 5 x 5
+##    mtry .metric     .estimator .estimate .config             
+##   &lt;int&gt; &lt;chr&gt;       &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;               
+## 1     5 mn_log_loss multiclass     0.893 Preprocessor1_Model1
+## 2    13 mn_log_loss multiclass     0.905 Preprocessor1_Model2
+## 3    14 mn_log_loss multiclass     0.906 Preprocessor1_Model3
+## 4     2 mn_log_loss multiclass     0.877 Preprocessor1_Model4
+## 5     8 mn_log_loss multiclass     0.897 Preprocessor1_Model5
+## 
+## [[2]]
+## # A tibble: 5 x 5
+##    mtry .metric     .estimator .estimate .config             
+##   &lt;int&gt; &lt;chr&gt;       &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;               
+## 1     5 mn_log_loss multiclass     0.894 Preprocessor1_Model1
+## 2    13 mn_log_loss multiclass     0.903 Preprocessor1_Model2
+## 3    14 mn_log_loss multiclass     0.903 Preprocessor1_Model3
+## 4     2 mn_log_loss multiclass     0.879 Preprocessor1_Model4
+## 5     8 mn_log_loss multiclass     0.893 Preprocessor1_Model5
+## 
+## [[3]]
+## # A tibble: 5 x 5
+##    mtry .metric     .estimator .estimate .config             
+##   &lt;int&gt; &lt;chr&gt;       &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;               
+## 1     5 mn_log_loss multiclass     0.897 Preprocessor1_Model1
+## 2    13 mn_log_loss multiclass     0.915 Preprocessor1_Model2
+## 3    14 mn_log_loss multiclass     0.920 Preprocessor1_Model3
+## 4     2 mn_log_loss multiclass     0.875 Preprocessor1_Model4
+## 5     8 mn_log_loss multiclass     0.907 Preprocessor1_Model5</code></pre>
+</div>
+<div id="final-model-update" class="section level2">
+<h2>Final model update</h2>
+<pre class="r"><code>best_param_rf &lt;- select_best(rf_res) 
+final_rf &lt;- finalize_workflow(rf_wf, best_param_rf)
+final_rf</code></pre>
+<pre><code>## == Workflow ====================================================================
+## Preprocessor: Formula
+## Model: rand_forest()
+## 
+## -- Preprocessor ----------------------------------------------------------------
+## credit ~ .
+## 
+## -- Model -----------------------------------------------------------------------
+## Random Forest Model Specification (classification)
+## 
+## Main Arguments:
+##   mtry = 2
+##   trees = 1000
+## 
+## Computational engine: ranger</code></pre>
+</div>
+<div id="final-model-setting" class="section level2">
+<h2>final model setting</h2>
+<pre class="r"><code>final_rf_model &lt;- finalize_model(rf_spec, best_param_rf) </code></pre>
+</div>
+<div id="final-model-workflow에-업데이트" class="section level2">
+<h2>final model workflow에 업데이트</h2>
+<pre class="r"><code>final_rf_workflow &lt;- rf_wf %&gt;% update_model(final_rf_model)</code></pre>
+</div>
+<div id="final-model-학습" class="section level2">
+<h2>final model 학습</h2>
+<pre class="r"><code>rf_fit &lt;- fit(final_rf_workflow, data = train2)</code></pre>
+</div>
+</div>
+<div id="result" class="section level1">
+<h1>Result</h1>
+<div id="prediction" class="section level2">
+<h2>Prediction</h2>
+<pre class="r"><code>pred_rf &lt;- 
+    predict(rf_fit, test2, type = &#39;prob&#39;)
+pred_rf %&gt;% head() </code></pre>
+<pre><code>## # A tibble: 6 x 3
+##   .pred_0 .pred_1 .pred_2
+##     &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+## 1  0.339    0.217   0.444
+## 2  0.110    0.325   0.565
+## 3  0.123    0.267   0.611
+## 4  0.0623   0.368   0.570
+## 5  0.0889   0.149   0.763
+## 6  0.0826   0.169   0.748</code></pre>
+</div>
+<div id="confusion-matrix" class="section level2">
+<h2>confusion matrix</h2>
+<pre class="r"><code>rf_res1 &lt;- tune_grid(
+    rf_wf,  
+    resamples = vb_folds, 
+    grid = 5, 
+    control = control_resamples(save_pred = T)   
+)</code></pre>
+<pre><code>## i Creating pre-processing data to finalize unknown parameter: mtry</code></pre>
+<pre class="r"><code>rf_res1 %&gt;% 
+  collect_predictions() %&gt;% 
+  conf_mat(credit, .pred_class)</code></pre>
+<pre><code>##           Truth
+## Prediction    0    1    2
+##          0   39   16   26
+##          1   43  173  232
+##          2  550 1239 3274</code></pre>
+<pre class="r"><code>rf_res1 %&gt;% 
+  collect_metrics()</code></pre>
+<pre><code>## # A tibble: 8 x 7
+##    mtry .metric  .estimator  mean     n std_err .config             
+##   &lt;int&gt; &lt;chr&gt;    &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt; &lt;chr&gt;               
+## 1     4 accuracy multiclass 0.632     3 0.00214 Preprocessor1_Model1
+## 2     4 roc_auc  hand_till  0.569     3 0.0109  Preprocessor1_Model1
+## 3    15 accuracy multiclass 0.618     3 0.00474 Preprocessor1_Model2
+## 4    15 roc_auc  hand_till  0.559     3 0.0119  Preprocessor1_Model2
+## 5    10 accuracy multiclass 0.619     3 0.00318 Preprocessor1_Model3
+## 6    10 roc_auc  hand_till  0.561     3 0.0136  Preprocessor1_Model3
+## 7     7 accuracy multiclass 0.624     3 0.00351 Preprocessor1_Model4
+## 8     7 roc_auc  hand_till  0.563     3 0.0112  Preprocessor1_Model4</code></pre>
+<pre class="r"><code>rf_fit %&gt;% 
+  predict(test2) %&gt;% 
+  bind_cols(test2$credit) %&gt;% 
+  conf_mat(...2, .pred_class)</code></pre>
+<pre><code>## New names:
+## * NA -&gt; ...2</code></pre>
+<pre><code>##           Truth
+## Prediction   0   1   2
+##          0   0   0   0
+##          1   0  12   6
+##          2  69 142 373</code></pre>
+</div>
+</div>
+<div id="regularized-multinomial-regression" class="section level1">
+<h1>regularized multinomial regression</h1>
+<pre class="r"><code>linear_rec &lt;- train %&gt;% 
+  recipe(credit~.) %&gt;%
+  step_rm(flag_mobil, index) %&gt;% 
+  step_mutate(
+              days_birth = days_birth + 25152, # 출생일
+              days_employed = days_employed + 15713, # 업무 시작일  
+              begin_month = begin_month + 60) %&gt;% 
+  step_mutate(
+              year_birth = round(days_birth/365), 
+              month_birth = round(days_birth/30), 
+              year_employed = round(days_employed/365),
+              month_employed = round(days_employed/30), 
+              begin_year = begin_month/12) %&gt;%
+  step_other(income_type, occyp_type, house_type, threshold = 0.1, other = &#39;infreq_combined&#39;) %&gt;% 
+  
+  step_impute_bag(occyp_type, impute_with = imp_vars(car, reality, income_total, income_type, edu_type, house_type, family_type, family_size),  trees = 100) %&gt;% 
+  step_BoxCox(all_numeric()) %&gt;% 
+  step_dummy(all_nominal(), -credit, one_hot = TRUE) %&gt;%
+  step_smote(credit, over_ratio = 0.7) %&gt;% 
+  step_rm(days_birth, days_employed, begin_month, month_birth, month_employed) %&gt;% 
+  prep(training = train)</code></pre>
+<pre class="r"><code>train3 &lt;- juice(linear_rec)
+test3 &lt;- bake(linear_rec, new_data = test)</code></pre>
+<pre><code>## Warning:  There was 1 column that was a factor when the recipe was prepped:
+##  &#39;credit&#39;.
+##  This may cause errors when processing new data.</code></pre>
+<pre class="r"><code>multi_spec &lt;- multinom_reg(mode = &quot;classification&quot;,
+    penalty = tune(), 
+    mixture = tune()) %&gt;%
+    set_engine(&quot;glmnet&quot;) </code></pre>
+<pre class="r"><code>lambda_grid &lt;- grid_max_entropy(parameters(penalty(), mixture()), size = 20)</code></pre>
+<pre class="r"><code>multi_wf &lt;- workflow() %&gt;%
+  add_model(multi_spec) %&gt;% 
+  add_formula(credit ~ .)</code></pre>
+<pre class="r"><code>multi_spec_tbl &lt;- tune_grid(
+  multi_wf, 
+  model = multi_spec, 
+  resamples = vb_folds, 
+  grid = lambda_grid, 
+  metrics = metric_set(mn_log_loss),
+  control = ctrl_grid
+)</code></pre>
+<pre><code>## Warning: The `...` are not used in this function but one or more objects were
+## passed: &#39;model&#39;</code></pre>
+<pre class="r"><code>multi_spec_tbl</code></pre>
+<pre><code>## # Tuning results
+## # 3-fold cross-validation using stratification 
+## # A tibble: 3 x 5
+##   splits            id    .metrics          .notes           .predictions       
+##   &lt;list&gt;            &lt;chr&gt; &lt;list&gt;            &lt;list&gt;           &lt;list&gt;             
+## 1 &lt;split [931/467]&gt; Fold1 &lt;tibble [20 x 6]&gt; &lt;tibble [0 x 1]&gt; &lt;tibble [9,340 x 8~
+## 2 &lt;split [932/466]&gt; Fold2 &lt;tibble [20 x 6]&gt; &lt;tibble [0 x 1]&gt; &lt;tibble [9,320 x 8~
+## 3 &lt;split [933/465]&gt; Fold3 &lt;tibble [20 x 6]&gt; &lt;tibble [0 x 1]&gt; &lt;tibble [9,300 x 8~</code></pre>
+<pre class="r"><code>multi_best_param &lt;- select_best(multi_spec_tbl) # 0.0003296647  0.9893142   Preprocessor1_Model49
+final_multinom &lt;- finalize_workflow(multi_wf, multi_best_param)</code></pre>
+<pre class="r"><code>multi_final_model &lt;- finalize_model(multi_spec, multi_best_param) </code></pre>
+<pre class="r"><code>multi_final_workflow &lt;- multi_wf %&gt;% update_model(multi_final_model)</code></pre>
+<pre class="r"><code>multi_fit &lt;- fit(multi_final_workflow, data = train3)</code></pre>
+<pre class="r"><code>pred_multinom &lt;- 
+    predict(multi_fit, test3, type = &#39;prob&#39;) 
+pred_multinom %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 x 3
+##   .pred_0 .pred_1 .pred_2
+##     &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;
+## 1   0.292   0.292   0.417
+## 2   0.292   0.292   0.417
+## 3   0.292   0.292   0.417
+## 4   0.292   0.292   0.417
+## 5   0.292   0.292   0.417
+## 6   0.292   0.292   0.417</code></pre>
+</div>
+<div id="stacking" class="section level1">
+<h1>stacking</h1>
+<pre class="r"><code>credit_stacking &lt;- 
+  stacks() %&gt;% 
+  add_candidates(rf_res) %&gt;% 
+  add_candidates(multi_spec_tbl) %&gt;% 
+  blend_predictions() %&gt;% 
+  fit_members()</code></pre>
+<pre><code>## Warning: Predictions from 9 candidates were identical to those from existing
+## * candidates and were removed from the data stack.</code></pre>
+<pre class="r"><code>result &lt;- predict(credit_stacking, test2)</code></pre>
+<div id="performance" class="section level2">
+<h2>performance</h2>
+<pre class="r"><code>result %&gt;% 
+  bind_cols(test2$credit) %&gt;% 
+  conf_mat(...2, .pred_class)</code></pre>
+<pre><code>## New names:
+## * NA -&gt; ...2</code></pre>
+<pre><code>##           Truth
+## Prediction   0   1   2
+##          0   1   0   0
+##          1   0   3   4
+##          2  68 151 375</code></pre>
+<pre class="r"><code>rf_fit %&gt;% 
+  predict(test2) %&gt;% 
+  bind_cols(test2$credit) %&gt;% 
+  conf_mat(...2, .pred_class) %&gt;% 
+  summary()</code></pre>
+<pre><code>## New names:
+## * NA -&gt; ...2</code></pre>
+<pre><code>## Warning: While computing multiclass `precision()`, some levels had no predicted events (i.e. `true_positive + false_positive = 0`). 
+## Precision is undefined in this case, and those levels will be removed from the averaged result.
+## Note that the following number of true events actually occured for each problematic event level:
+## &#39;0&#39;: 69
+
+## Warning: While computing multiclass `precision()`, some levels had no predicted events (i.e. `true_positive + false_positive = 0`). 
+## Precision is undefined in this case, and those levels will be removed from the averaged result.
+## Note that the following number of true events actually occured for each problematic event level:
+## &#39;0&#39;: 69</code></pre>
+<pre><code>## # A tibble: 13 x 3
+##    .metric              .estimator .estimate
+##    &lt;chr&gt;                &lt;chr&gt;          &lt;dbl&gt;
+##  1 accuracy             multiclass    0.640 
+##  2 kap                  multiclass    0.0554
+##  3 sens                 macro         0.354 
+##  4 spec                 macro         0.680 
+##  5 ppv                  macro        NA     
+##  6 npv                  macro         0.770 
+##  7 mcc                  multiclass    0.121 
+##  8 j_index              macro         0.0342
+##  9 bal_accuracy         macro         0.517 
+## 10 detection_prevalence macro         0.333 
+## 11 precision            macro         0.653 
+## 12 recall               macro         0.354 
+## 13 f_meas               macro         0.457</code></pre>
+</div>
+</div>
