@@ -12,11 +12,7 @@ editor_options:
     wrap: 72
 ---
 
-# EM 알고리즘 설명
-
-# EM 알고리즘 정의
-
-## EM algorithm for Two component Gaussian Mixture model
+# EM algorithm for Two component Gaussian Mixture model
 
 ```{r}
 dat <- c(-0.39, 0.12, 0.94, 1.67, 1.76, 2.44, 3.72, 4.28, 4.92, 5.53,
@@ -29,7 +25,7 @@ n = 20 데이터는 bimodal 형태를 띄고 있다. 이 데이터는 어떤 분
 나왔는가?
 
 우리가 아는 대부분의 분포는 unimodal(단봉) 형태로 bimodal(쌍봉) 형태에
-대해서는 잘 모른다. 따라서 추론을 해야하는데 가장 쉽게 생각할 수 있는
+대해서는 잘모른다. 따라서 추론을 해야하는데 가장 쉽게 생각할 수 있는
 것은 두개의 정규분포를 혼합한 형태로 생각하는 것이다. 이러한 분포를
 mixture distribution이라고 한다. bimodal(쌍봉) 형태의 분포는 두 개의
 정규분포를 결합한 mixture distribution이라는 가설을 세웠으므로 문제를
@@ -83,7 +79,7 @@ res
 
 ```
 
-2.  M-step
+3.  M-step
 
 $\hat{\mu_1}=\frac{\sum_{i=1}^n (1-\hat{\gamma_i})y_i}{\sum_{i=1}^n(1-\hat{\gamma_i})}$,\
 $\hat{\mu_2}=\frac{\sum_{i=1}^n \hat{\gamma_i}y_i}{\sum_{i=1}^n \hat{\gamma_i}}$,
@@ -101,7 +97,7 @@ s1 <- sqrt(sum((1-res)*(y-mu1)^2)/sum(1-res))
 
 ```
 
-3.  E-M step 반복
+4.  E-M step 반복
 
 ```{r}
 y <- c(-0.39, 0.06, 0.12, 0.48, 0.94, 1.01, 1.67, 1.68, 1.76, 1.80, 2.44, 3.25, 3.72, 4.12, 4.28, 4.60, 4.92, 5.28, 5.53, 6.22 )
@@ -149,7 +145,7 @@ s2
 
 ```
 
-## Two component Gaussian Mixture  example
+## Two component Gaussian Mixture another example
 
 일반적으로 흐린 날에는 맑은 날보다 온도가 낮다. 10일 동안의 온도
 데이터가 주어졌을 때 맑은 날과 흐린 날의 평균 온도는 얼마인가? (10일
@@ -176,6 +172,8 @@ $temerature = (70, 62, 89, 54, 97, 75, 82, 56, 32, 78)$
 
 -   $Z_{ij}$ : unobservable
 
+1.  초기값을 설정한다.
+
 ```{r}
 temp <- c(70, 62, 89, 54, 97, 75, 82, 56, 32, 78)
 n <- length(temp)
@@ -184,7 +182,7 @@ mu2 <- 55 # initial value
 
 ```
 
-### E- STEP
+2.  E- Step
 
 $$E[Z_{ij}] = \frac{P(X=x_i|\mu = \mu_j)}{\sum_{k=1}^2 P(X=x_i|\mu = \mu_k)} = \frac{\exp(-\frac{1}{2\sigma^2}(x_i-\mu_j)^2)}{\sum_{k=1}^2\exp(-\frac{1}{2\sigma^2}(x_i-\mu_k)^2)}$$
 
@@ -209,7 +207,7 @@ EZ1
 EZ2
 ```
 
-### M - STEP
+3.  M - Step
 
 $$\mu_j \longleftarrow \frac{\sum_{i=1}^m E[Z_{ij}]X_i}{\sum_{i=1}^m E[Z_{ij}]}$$
 
@@ -230,9 +228,7 @@ sum(numerator2)/sum(EZ2) # update value
 
 ```
 
-수렴할 때까지 E - step, M - step 반복
-
-# iteration E-M step
+4.  수렴할 때까지 E - step, M - step 반복
 
 ```{r}
 temp <- c(70, 62, 89, 54, 97, 75, 82, 56, 32, 78)
@@ -272,7 +268,7 @@ mu
 
 ```
 
-# Multinomial example
+## Multinomial example
 
 ```{r}
 y1 <- 38

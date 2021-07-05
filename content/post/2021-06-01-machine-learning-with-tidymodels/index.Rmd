@@ -622,7 +622,7 @@ RMSE(elastic_caret %>% predict(test), test$actual)
 ```{r}
 library(caretEnsemble)
 stackControl <- trainControl(method="repeatedcv", number=5, repeats=2, savePredictions=TRUE) # sampling = "none", "down", "up", "smote", or "rose"
-
+getwd()
 set.seed(123)
 stack_models <- caretList(actual~., 
                           data = train, 

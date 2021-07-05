@@ -1,0 +1,15 @@
+---
+title: 'distill blog '
+author: "dondon"
+date: '2021-07-05'
+slug: distill-blog
+categories: R
+tags: visualization
+---
+
+
+Distill blog로 이전합니다. 
+
+https://dondon-blog.netlify.app/
+
+

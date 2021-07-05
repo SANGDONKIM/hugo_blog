@@ -2,11 +2,14 @@
 title: 'ARIMA, Seasonal ARIMA, time series regression with R '
 author: 'dondon '
 date: '2021-06-04'
-slug: arima-with-r
+output:
+  word_document: default
+  pdf_document: default
 categories:
 - R
 - statistics
 tags: statistics
+slug: arima-with-r
 ---
 
 # package
